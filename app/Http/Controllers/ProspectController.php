@@ -1,0 +1,470 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Group;
+use App\Models\Prospect;
+use App\Models\ProspectSource;
+use App\Models\ProspectStatus;
+use App\Models\ProspectWeeklyUpdate;
+use App\Models\Sender;
+use App\Models\Service;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class ProspectController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $user = $request->user();
+        $role = $user->role?->slug;
+
+        $query = Prospect::query()
+            ->with(['service', 'sender', 'group', 'source', 'marketing', 'status', 'creator', 'weeklyUpdates.user'])
+            ->latest('entry_date')
+            ->latest('entry_time');
+
+        // Marketing: hanya prospek miliknya
+        if ($role === 'marketing') {
+            $query->where('marketing_user_id', $user->id);
+        }
+
+        if ($request->filled('month')) {
+            $query->whereMonth('entry_date', $request->integer('month'));
+            if ($request->filled('year')) {
+                $query->whereYear('entry_date', $request->integer('year'));
+            } else {
+                $query->whereYear('entry_date', (int) now()->year);
+            }
+        } elseif ($request->filled('year')) {
+            $query->whereYear('entry_date', $request->integer('year'));
+        }
+
+        if ($request->filled('status_id')) {
+            $query->where('status_id', $request->integer('status_id'));
+        }
+        if ($request->filled('marketing_user_id') && in_array($role, ['manager_marketing', 'super_admin'], true)) {
+            $query->where('marketing_user_id', $request->integer('marketing_user_id'));
+        }
+        if ($request->filled('q')) {
+            $term = '%'.$request->string('q').'%';
+            $query->where('client_phone', 'like', $term);
+        }
+
+        $prospects = $query->paginate(15)->withQueryString();
+
+        return view('prospects.index', [
+            'prospects' => $prospects,
+            'statuses' => ProspectStatus::orderBy('id')->get(),
+            'marketings' => User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->orderBy('name')->get(),
+            'role' => $role,
+            'month' => $request->filled('month') ? $request->integer('month') : null,
+            'year' => $request->filled('year') ? $request->integer('year') : null,
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        Carbon::setLocale('id');
+
+        $user = $request->user();
+        $role = $user->role?->slug;
+
+        $query = Prospect::query()
+            ->with(['service', 'sender', 'group', 'source', 'marketing', 'status', 'creator'])
+            ->latest('entry_date')
+            ->latest('entry_time');
+
+        // Marketing: hanya prospek miliknya
+        if ($role === 'marketing') {
+            $query->where('marketing_user_id', $user->id);
+        }
+
+        $month = $request->filled('month') ? $request->integer('month') : null;
+        $year = $request->filled('year') ? $request->integer('year') : ($month ? (int) now()->year : null);
+
+        if ($month) {
+            $query->whereMonth('entry_date', $month);
+            if ($year) {
+                $query->whereYear('entry_date', $year);
+            }
+        } elseif ($year) {
+            $query->whereYear('entry_date', $year);
+        }
+
+        if ($request->filled('status_id')) {
+            $query->where('status_id', $request->integer('status_id'));
+        }
+        if ($request->filled('marketing_user_id') && in_array($role, ['manager_marketing', 'super_admin'], true)) {
+            $query->where('marketing_user_id', $request->integer('marketing_user_id'));
+        }
+        if ($request->filled('q')) {
+            $term = '%'.$request->string('q').'%';
+            $query->where('client_phone', 'like', $term);
+        }
+
+        $prospects = $query->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Data Prospek');
+        $sheet->setShowGridLines(true);
+
+        // Header Title
+        if ($month && $year) {
+            $monthName = Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y');
+            $titleText = 'PROSPEK MARKETING HIVE FIVE PERIODE ' . strtoupper($monthName);
+            $filenamePeriod = str_replace(' ', '_', $monthName);
+        } elseif ($year) {
+            $titleText = 'PROSPEK MARKETING HIVE FIVE PERIODE TAHUN ' . $year;
+            $filenamePeriod = 'Tahun_' . $year;
+        } else {
+            $titleText = 'PROSPEK MARKETING HIVE FIVE PERIODE SEMUA DATA';
+            $filenamePeriod = 'Semua_Periode';
+        }
+
+        // Row 1: Title
+        $sheet->mergeCells('A1:L1');
+        $sheet->setCellValue('A1', $titleText);
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(11.5)->getColor()->setARGB('FF1E293B');
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF8FAFC');
+        $sheet->getRowDimension(1)->setRowHeight(32);
+
+        // Row 2: Kolom Header
+        $headers = [
+            'A2' => ['col' => 'A', 'title' => 'No', 'width' => 6, 'align' => Alignment::HORIZONTAL_CENTER],
+            'B2' => ['col' => 'B', 'title' => 'Nomor Telfon Client', 'width' => 22, 'align' => Alignment::HORIZONTAL_LEFT],
+            'C2' => ['col' => 'C', 'title' => 'Layanan/ Jasa', 'width' => 24, 'align' => Alignment::HORIZONTAL_LEFT],
+            'D2' => ['col' => 'D', 'title' => 'Tanggal Masuk Prospek', 'width' => 22, 'align' => Alignment::HORIZONTAL_CENTER],
+            'E2' => ['col' => 'E', 'title' => 'Jam', 'width' => 10, 'align' => Alignment::HORIZONTAL_CENTER],
+            'F2' => ['col' => 'F', 'title' => 'Pengirim Prospek', 'width' => 20, 'align' => Alignment::HORIZONTAL_LEFT],
+            'G2' => ['col' => 'G', 'title' => 'Group', 'width' => 18, 'align' => Alignment::HORIZONTAL_LEFT],
+            'H2' => ['col' => 'H', 'title' => 'Sumber Prospek', 'width' => 20, 'align' => Alignment::HORIZONTAL_LEFT],
+            'I2' => ['col' => 'I', 'title' => 'Nama Marketing', 'width' => 22, 'align' => Alignment::HORIZONTAL_LEFT],
+            'J2' => ['col' => 'J', 'title' => 'Status Prospek', 'width' => 18, 'align' => Alignment::HORIZONTAL_CENTER],
+            'K2' => ['col' => 'K', 'title' => 'Tanggal & Waktu Closing', 'width' => 24, 'align' => Alignment::HORIZONTAL_CENTER],
+            'L2' => ['col' => 'L', 'title' => 'KETERANGAN', 'width' => 36, 'align' => Alignment::HORIZONTAL_LEFT],
+        ];
+
+        foreach ($headers as $cell => $info) {
+            $sheet->setCellValue($cell, $info['title']);
+            $sheet->getColumnDimension($info['col'])->setWidth($info['width']);
+        }
+
+        $headerRange = 'A2:L2';
+        $sheet->getStyle($headerRange)->getFont()->setBold(true)->setSize(10)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle($headerRange)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1E293B');
+        $sheet->getStyle($headerRange)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        foreach ($headers as $cell => $info) {
+            $sheet->getStyle($cell)->getAlignment()->setHorizontal($info['align']);
+        }
+        $sheet->getRowDimension(2)->setRowHeight(28);
+
+        $sheet->freezePane('C3');
+
+        $rowNum = 3;
+
+        foreach ($prospects as $idx => $p) {
+            $sheet->getRowDimension($rowNum)->setRowHeight(22);
+
+            // A: No
+            $sheet->setCellValue("A{$rowNum}", $idx + 1);
+            $sheet->getStyle("A{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            // B: Nomor Telfon Client (explicit text)
+            $sheet->setCellValueExplicit("B{$rowNum}", $p->client_phone ?? '-', DataType::TYPE_STRING);
+            $sheet->getStyle("B{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle("B{$rowNum}")->getFont()->setBold(true)->getColor()->setARGB('FF0F172A');
+
+            // C: Layanan/ Jasa
+            $sheet->setCellValue("C{$rowNum}", $p->service->name ?? '-');
+            $sheet->getStyle("C{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // D: Tanggal Masuk Prospek
+            $sheet->setCellValue("D{$rowNum}", $p->entry_date ? $p->entry_date->translatedFormat('d/m/Y') : '-');
+            $sheet->getStyle("D{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            // E: Jam
+            $sheet->setCellValue("E{$rowNum}", $p->entry_time ? substr($p->entry_time, 0, 5) : '-');
+            $sheet->getStyle("E{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            // F: Pengirim Prospek
+            $sheet->setCellValue("F{$rowNum}", $p->sender->name ?? '-');
+            $sheet->getStyle("F{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // G: Group
+            $sheet->setCellValue("G{$rowNum}", $p->group->name ?? '-');
+            $sheet->getStyle("G{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // H: Sumber Prospek
+            $sheet->setCellValue("H{$rowNum}", $p->source->name ?? '-');
+            $sheet->getStyle("H{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // I: Nama Marketing
+            $sheet->setCellValue("I{$rowNum}", $p->marketing->name ?? '-');
+            $sheet->getStyle("I{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // J: Progress Prospek
+            $statusName = $p->status->name ?? '-';
+            $sheet->setCellValue("J{$rowNum}", $statusName);
+            $sheet->getStyle("J{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle("J{$rowNum}")->getFont()->setBold(true);
+
+            $statusSlug = $p->status->slug ?? '';
+            if ($statusSlug === 'closing') {
+                $sheet->getStyle("J{$rowNum}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFDCFCE7');
+                $sheet->getStyle("J{$rowNum}")->getFont()->getColor()->setARGB('FF15803D');
+            } elseif ($statusSlug === 'open') {
+                $sheet->getStyle("J{$rowNum}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFDBEAFE');
+                $sheet->getStyle("J{$rowNum}")->getFont()->getColor()->setARGB('FF1D4ED8');
+            } elseif ($statusSlug === 'cancel') {
+                $sheet->getStyle("J{$rowNum}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEE2E2');
+                $sheet->getStyle("J{$rowNum}")->getFont()->getColor()->setARGB('FFB91C1C');
+            }
+
+            // K: Tanggal & Waktu Closing
+            $closingText = $p->closed_at ? $p->closed_at->translatedFormat('d/m/Y H:i') : '-';
+            $sheet->setCellValue("K{$rowNum}", $closingText);
+            $sheet->getStyle("K{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+            // L: KETERANGAN (gabungan nominal closing jika ada + catatan)
+            $keteranganParts = [];
+            if ($p->nominal_closing && (float) $p->nominal_closing > 0) {
+                $keteranganParts[] = 'Closing: Rp ' . number_format((float) $p->nominal_closing, 0, ',', '.');
+            }
+            if (!empty(trim($p->note ?? ''))) {
+                $keteranganParts[] = trim($p->note);
+            }
+            $keterangan = !empty($keteranganParts) ? implode(' - ', $keteranganParts) : '-';
+            $sheet->setCellValue("L{$rowNum}", $keterangan);
+            $sheet->getStyle("L{$rowNum}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+
+            // Alternating row background
+            if ($idx % 2 === 1) {
+                $sheet->getStyle("A{$rowNum}:L{$rowNum}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF8FAFC');
+            }
+
+            $rowNum++;
+        }
+
+        // Summary row (Total Prospek)
+        $summaryRow = $rowNum;
+        $sheet->getRowDimension($summaryRow)->setRowHeight(26);
+        $sheet->mergeCells("A{$summaryRow}:I{$summaryRow}");
+        $sheet->setCellValue("A{$summaryRow}", 'TOTAL DATA: ' . $prospects->count() . ' PROSPEK');
+        $sheet->getStyle("A{$summaryRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("A{$summaryRow}")->getFont()->setBold(true)->setSize(10)->getColor()->setARGB('FF1E293B');
+
+        $closingCount = $prospects->filter(fn ($p) => ($p->status->slug ?? '') === 'closing')->count();
+        $openCount = $prospects->filter(fn ($p) => ($p->status->slug ?? '') === 'open')->count();
+        $cancelCount = $prospects->filter(fn ($p) => ($p->status->slug ?? '') === 'cancel')->count();
+
+        $sheet->setCellValue("J{$summaryRow}", "Closing: {$closingCount} | Open: {$openCount} | Cancel: {$cancelCount}");
+        $sheet->mergeCells("J{$summaryRow}:L{$summaryRow}");
+        $sheet->getStyle("J{$summaryRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("J{$summaryRow}")->getFont()->setBold(true)->setSize(9.5)->getColor()->setARGB('FF475569');
+        $sheet->getStyle("A{$summaryRow}:L{$summaryRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF1F5F9');
+
+        // Borders
+        $sheet->getStyle("A2:L{$summaryRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FFCBD5E1');
+        $sheet->getStyle("A2:L2")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setARGB('FF64748B');
+        $sheet->getStyle("A{$summaryRow}:L{$summaryRow}")->getBorders()->getTop()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setARGB('FF64748B');
+        $sheet->getStyle("A{$summaryRow}:L{$summaryRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_DOUBLE)->getColor()->setARGB('FF64748B');
+
+        $filename = 'Data_Prospek_' . $filenamePeriod . '.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
+            'Pragma' => 'public',
+        ]);
+    }
+
+    public function create(Request $request): View
+    {
+        $role = $request->user()->role?->slug;
+        abort_unless(in_array($role, ['cs', 'super_admin'], true), 403);
+
+        return view('prospects.create', $this->formOptions());
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $role = $request->user()->role?->slug;
+        abort_unless(in_array($role, ['cs', 'super_admin'], true), 403);
+
+        $data = $this->validateProspect($request);
+        $data['created_by'] = $request->user()->id;
+        $data['status_id'] = ProspectStatus::where('slug', 'open')->value('id');
+
+        if (empty($data['source_id'])) {
+            $defaultSource = ProspectSource::firstOrCreate(['name' => '-']);
+            $data['source_id'] = $defaultSource->id;
+        }
+
+        Prospect::create($data);
+
+        return redirect()->route('prospects.index')->with('status', 'Prospek berhasil dibuat.');
+    }
+
+    public function edit(Request $request, Prospect $prospect): View
+    {
+        $this->authorizeProspectAccess($request, $prospect, editable: true);
+
+        $now = Carbon::now();
+        $weeklyUpdates = $prospect->weeklyUpdates()->with('user')->limit(8)->get();
+        $currentMonth = (int) $now->month;
+        $currentYear = (int) $now->year;
+        // Determine week-of-month (1..4) for today
+        $dom = (int) $now->day;
+        $currentWeekOfMonth = (int) ceil($dom / 7);
+        if ($currentWeekOfMonth > 4) {
+            $currentWeekOfMonth = 4;
+        }
+
+        // Build keyed collection for fast lookup
+        $updatesByWeek = $weeklyUpdates->keyBy(fn ($u) => $u->week_of_month);
+
+        // Access flags from admin (which weeks are open for this prospect, current month)
+        $accessByWeek = $prospect->weeklyAccess()
+            ->where('month', $currentMonth)
+            ->get()
+            ->keyBy('week_of_month');
+
+        return view('prospects.edit', array_merge(
+            [
+                'prospect' => $prospect,
+                'weeklyUpdates' => $weeklyUpdates,
+                'updatesByWeek' => $updatesByWeek,
+                'accessByWeek' => $accessByWeek,
+                'currentMonth' => $currentMonth,
+                'currentYear' => $currentYear,
+                'currentWeekOfMonth' => $currentWeekOfMonth,
+            ],
+            $this->formOptions(),
+        ));
+    }
+
+    public function update(Request $request, Prospect $prospect): RedirectResponse
+    {
+        $this->authorizeProspectAccess($request, $prospect, editable: true);
+
+        $data = $this->validateProspect($request, partial: true);
+
+        if (array_key_exists('status_id', $data)) {
+            $statusSlug = ProspectStatus::find($data['status_id'])?->slug;
+            if ($statusSlug === 'closing' && empty($data['closed_at'])) {
+                $data['closed_at'] = now();
+            }
+            if ($statusSlug !== 'closing') {
+                $data['closed_at'] = null;
+            }
+        }
+
+        $prospect->update($data);
+
+        // Save weekly update if submitted (per-week forms have weekly_year/month/week hidden)
+        if ($request->filled('weekly_year') && $request->filled('weekly_month') && $request->filled('weekly_week')) {
+            $weekOfMonth = max(1, min(4, (int) $request->input('weekly_week')));
+            $month = max(1, min(12, (int) $request->input('weekly_month')));
+            $year = (int) $request->input('weekly_year');
+            $noteField = 'weekly_note_'.$weekOfMonth;
+            if ($request->filled($noteField)) {
+                ProspectWeeklyUpdate::updateOrCreate(
+                    ['prospect_id' => $prospect->id, 'month' => $month, 'week_of_month' => $weekOfMonth],
+                    [
+                        'user_id' => $request->user()->id,
+                        'note' => $request->string($noteField),
+                    ],
+                );
+            }
+        }
+
+        return redirect()->route('prospects.edit', $prospect)->with('status', 'Prospek diperbarui.');
+    }
+
+    public function destroy(Request $request, Prospect $prospect): RedirectResponse
+    {
+        abort_unless(in_array($request->user()->role?->slug, ['manager_marketing', 'super_admin'], true), 403);
+        $prospect->delete();
+
+        return redirect()->route('prospects.index')->with('status', 'Prospek dihapus.');
+    }
+
+    private function validateProspect(Request $request, bool $partial = false): array
+    {
+        if ($request->has('nominal_closing')) {
+            $rawNominal = $request->input('nominal_closing');
+            if (is_string($rawNominal)) {
+                $cleanNominal = preg_replace('/[^0-9]/', '', $rawNominal);
+                $request->merge(['nominal_closing' => $cleanNominal !== '' ? (float) $cleanNominal : null]);
+            }
+        }
+
+        $required = $partial ? 'sometimes' : 'required';
+        $closingRequired = $partial ? 'sometimes|required' : 'required';
+
+        return $request->validate([
+            'client_phone' => [$required, 'string', 'max:32', 'regex:/^[0-9]+$/'],
+            'service_id' => [$required, 'exists:services,id'],
+            'entry_date' => [$required, 'date'],
+            'entry_time' => [$required, 'date_format:H:i'],
+            'sender_id' => [$required, 'exists:senders,id'],
+            'group_id' => [$required, 'exists:groups,id'],
+            'source_id' => ['nullable', 'exists:prospect_sources,id'],
+            'marketing_user_id' => [$required, 'exists:users,id'],
+            'status_id' => [$partial ? 'sometimes' : 'nullable', 'exists:prospect_statuses,id'],
+            'nominal_closing' => [$partial ? 'sometimes' : 'nullable', 'nullable', 'numeric', 'min:0'],
+            'note' => [$partial ? 'sometimes' : 'nullable', 'nullable', 'string', 'max:2000'],
+            'closed_at' => [$partial ? 'sometimes' : 'nullable', 'nullable', 'date'],
+        ], [
+            'client_phone.regex' => 'Nomor telepon hanya boleh berisi angka (0-9).',
+            'client_phone.max' => 'Nomor telepon maksimal 32 digit.',
+        ]);
+    }
+
+    private function formOptions(): array
+    {
+        return [
+            'services' => Service::orderBy('name')->get(),
+            'senders' => Sender::orderBy('name')->get(),
+            'groups' => Group::orderBy('name')->get(),
+            'sources' => ProspectSource::orderBy('name')->get(),
+            'statuses' => ProspectStatus::orderBy('id')->get(),
+            'marketings' => User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->orderBy('name')->get(),
+        ];
+    }
+
+    private function authorizeProspectAccess(Request $request, Prospect $prospect, bool $editable): void
+    {
+        $user = $request->user();
+        $role = $user->role?->slug;
+
+        if (in_array($role, ['manager_marketing', 'super_admin'], true)) {
+            return;
+        }
+        if ($role === 'cs') {
+            return; // CS boleh lihat & update semua
+        }
+        if ($role === 'marketing') {
+            abort_unless($prospect->marketing_user_id === $user->id, 403);
+
+            return;
+        }
+        abort(403);
+    }
+}
