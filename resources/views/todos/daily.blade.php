@@ -426,6 +426,10 @@
         font-weight: 800;
         letter-spacing: .02em;
     }
+    .file-chip-ico.is-img {
+        background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+        color: #1D4ED8;
+    }
     .file-chip-info { flex: 1; min-width: 0; }
     .file-chip-name {
         font-size: 13px;
@@ -1075,7 +1079,7 @@
             'instagram'   => ['IG',  'pi-ig'],
             'tiktok'      => ['TT',  'pi-tt'],
             'facebook'    => ['FB',  'pi-fb'],
-            'snack_video' => ['SV',  'pi-sv'],
+            'snack_video' => ['OV',  'pi-sv'],
         ];
         $filledLinks = 0;
         foreach ($platforms as $p) {
@@ -1090,7 +1094,7 @@
         <div>
             <h1>To Do Harian</h1>
             @if ($showTodo)
-                <p>Catat 12 link konten, 5 laporan PDF, dan catatan progres prospek untuk {{ $date->translatedFormat('l, d F Y') }}.</p>
+                <p>Catat 12 link konten, 5 laporan bukti (PDF / Gambar), dan catatan progres prospek untuk {{ $date->translatedFormat('l, d F Y') }}.</p>
             @else
                 <p>Pilih tanggal untuk mulai atau lihat todolist harian.</p>
             @endif
@@ -1510,7 +1514,7 @@
                                 <span class="todo-acc-badge empty">{{ $filledLinks }}/12 link</span>
                             @endif
                         </div>
-                        <div class="todo-acc-sub">Input 3 link promosi untuk IG, TikTok, FB, dan Snack Video</div>
+                        <div class="todo-acc-sub">Input 3 link promosi untuk IG, TikTok, FB, dan Other Video</div>
                     </div>
                     <span class="todo-acc-chevron" aria-hidden="true">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1547,7 +1551,7 @@
                                                 @endphp
                                                 <div class="link-row {{ $filled ? 'filled' : '' }}">
                                                     <span class="slot">{{ $slot }}</span>
-                                                    <input type="url" name="links[{{ $p['key'] }}][{{ $slot }}]" value="{{ $val }}" placeholder="https://{{ strtolower($p['label']) }}.com/..." {{ (isset($lockSetting) && $lockSetting->is_locked) ? 'disabled' : '' }}>
+                                                    <input type="url" name="links[{{ $p['key'] }}][{{ $slot }}]" value="{{ $val }}" @if($p['key'] !== 'snack_video') placeholder="https://{{ strtolower($p['label']) }}.com/..." @endif {{ (isset($lockSetting) && $lockSetting->is_locked) ? 'disabled' : '' }}>
                                                 </div>
                                             @endfor
                                         </div>
@@ -1612,14 +1616,14 @@
                             <div class="td-card-body" style="padding: 16px 18px 18px;">
                                 <div class="upload-section">
                                     <label class="drop-zone {{ (isset($lockSetting) && $lockSetting->is_locked) ? 'is-locked-zone' : '' }}" style="padding: 24px 16px;">
-                                        <input type="file" name="pdfs[{{ $task }}][]" accept="application/pdf" class="pdf-input" {{ (isset($lockSetting) && $lockSetting->is_locked) ? 'disabled' : '' }}>
+                                        <input type="file" name="pdfs[{{ $task }}][]" accept=".pdf,image/*,.jpg,.jpeg,.png,.webp" class="pdf-input" {{ (isset($lockSetting) && $lockSetting->is_locked) ? 'disabled' : '' }}>
                                         <div class="drop-zone-ico" style="width: 44px; height: 44px; margin-bottom: 10px;">
                                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                                         </div>
-                                        <p class="drop-zone-title" style="font-size: 13.5px;">{{ $existing->count() ? 'Ganti File PDF Bukti' : 'Pilih File PDF Bukti' }}</p>
+                                        <p class="drop-zone-title" style="font-size: 13.5px;">{{ $existing->count() ? 'Ganti File Bukti (PDF / Gambar)' : 'Pilih File Bukti (PDF / Gambar)' }}</p>
                                         <p class="drop-zone-sub" style="font-size: 11.5px;">Ketuk untuk upload file (upload baru akan menggantikan file sebelumnya)</p>
                                         <div class="upload-meta" style="font-size: 11px; margin-top: 8px;">
-                                            <span>Format PDF · Maks 10MB · 1 File per tugas</span>
+                                            <span>Format PDF / Gambar (JPG, PNG, WEBP) · Maks 100MB · 1 File per tugas</span>
                                         </div>
                                     </label>
 
@@ -1660,8 +1664,13 @@
                                     Mengunggah file baru di atas akan otomatis menggantikan file ini.
                                 </div>
                                 @foreach ($existing as $pdf)
+                                    @php
+                                        $ext = strtolower(pathinfo($pdf->original_name ?? $pdf->file_path, PATHINFO_EXTENSION));
+                                        $isImg = in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                                        $badgeText = $isImg ? ($ext === 'jpeg' ? 'JPG' : strtoupper($ext)) : 'PDF';
+                                    @endphp
                                     <div class="file-chip" id="file-chip-{{ $pdf->id }}">
-                                        <span class="file-chip-ico">PDF</span>
+                                        <span class="file-chip-ico {{ $isImg ? 'is-img' : '' }}">{{ $badgeText }}</span>
                                         <div class="file-chip-info">
                                             <span class="file-chip-name">{{ $pdf->original_name ?? basename($pdf->file_path) }}</span>
                                             <div class="file-chip-meta">
@@ -1689,7 +1698,7 @@
                         @else
                             <div class="files-list" style="padding: 0 18px 16px;">
                                 <div class="files-empty" style="padding: 16px 12px; font-size: 11.5px;">
-                                    Belum ada file PDF yang diupload untuk tugas ini
+                                    Belum ada file bukti yang diupload untuk tugas ini
                                 </div>
                             </div>
                         @endif
@@ -2283,7 +2292,7 @@ window.task7Manager = function (cfg) {
 
         progress.hidden = false;
         progress.classList.remove('done', 'error');
-        if (label) label.textContent = 'Mengupload berkas PDF…';
+        if (label) label.textContent = 'Mengupload berkas…';
         if (fileNameEl) fileNameEl.textContent = files.map(f => f.name).join(' • ') + ' (' + totalMB + ' MB)';
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -2325,7 +2334,7 @@ window.task7Manager = function (cfg) {
                 if (label) label.textContent = 'Upload gagal (status ' + xhr.status + '). Coba lagi.';
                 if (fileNameEl) {
                     var errSnippet = (xhr.responseText || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180);
-                    fileNameEl.textContent = errSnippet || 'Periksa ukuran file / format PDF.';
+                    fileNameEl.textContent = errSnippet || 'Periksa ukuran file / format PDF / Gambar.';
                 }
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -2430,7 +2439,7 @@ window.task7Manager = function (cfg) {
                 var id = btn.getAttribute('data-id');
                 var name = btn.getAttribute('data-name') || 'file ini';
 
-                AppSwal.confirm('Hapus File PDF', 'Apakah Anda yakin ingin menghapus file "' + name + '"?', true, 'Ya, Hapus').then(function (res) {
+                AppSwal.confirm('Hapus File Bukti', 'Apakah Anda yakin ingin menghapus file "' + name + '"?', true, 'Ya, Hapus').then(function (res) {
                     if (!res.isConfirmed) return;
 
                     btn.disabled = true;

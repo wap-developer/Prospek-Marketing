@@ -130,6 +130,7 @@
             color: var(--text-primary);
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
 
         body {
@@ -543,9 +544,20 @@
         }
 
         @keyframes pulse-badge {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
         }
 
         .notif-dd-panel {
@@ -644,6 +656,8 @@
             padding: 32px 28px 32px;
             flex: 1;
             width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         /* ============== CARDS ============== */
@@ -1445,7 +1459,10 @@
 
         @media (max-width: 720px) {
             .app-main {
-                padding: 22px 16px 32px;
+                padding: 16px 12px 32px;
+                min-width: 0;
+                width: 100%;
+                max-width: 100%;
             }
 
             .app-header-inner {
@@ -2057,10 +2074,12 @@
                 gap: 10px;
                 text-align: center;
             }
+
             .hf-pagination-info {
                 text-align: center;
                 width: 100%;
             }
+
             .hf-pagination-links {
                 justify-content: center;
                 width: 100%;
@@ -2366,7 +2385,7 @@
                                     <polyline points="22,6 12,13 2,6" />
                                 </svg>
                             </span>
-                            <a href="mailto:admin@prospek.local">admin@prospek.local</a>
+                            <a href="mailto:prospek@hivefive.net">prospek@hivefive.net</a>
                         </div>
                         <div class="contact-item">
                             <span class="ic-box">
@@ -2374,7 +2393,12 @@
                                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                                 </svg>
                             </span>
-                            <span>+62 859-2458-5391</span>
+                            <span>
+                                +62 811-8999-7817 <br />
+                                +62 812-8094-7373 <br />
+                                +62 811-8803-6939 <br />
+                                +62 813-5009-5007 <br />
+                            </span>
                         </div>
                         <div class="contact-item">
                             <span class="ic-box">
@@ -2516,7 +2540,9 @@
 
                     if (isCompleted && !notifiedCompletedIds[item.id]) {
                         notifiedCompletedIds[item.id] = true;
-                        try { sessionStorage.setItem('notified_export_ids', JSON.stringify(notifiedCompletedIds)); } catch(e){}
+                        try {
+                            sessionStorage.setItem('notified_export_ids', JSON.stringify(notifiedCompletedIds));
+                        } catch (e) {}
                         if (window.AppSwal && AppSwal.toast) {
                             AppSwal.toast('success', 'Export to-do ' + (item.month_label || '') + ' selesai! Klik lonceng untuk mengunduh.');
                         }
@@ -2563,7 +2589,9 @@
                         notifBadge.className = 'notif-badge pulsing';
                         notifBadge.style.display = 'block';
                     } else {
-                        var hasRecentCompleted = exports.some(function(x) { return x.status === 'completed'; });
+                        var hasRecentCompleted = exports.some(function(x) {
+                            return x.status === 'completed';
+                        });
                         if (hasRecentCompleted) {
                             notifBadge.className = 'notif-badge';
                             notifBadge.style.display = 'block';
@@ -2579,24 +2607,37 @@
             function fetchExportNotifications(keepPolling) {
                 if (!notifBtn) return;
                 fetch('{{ route("manager.todos.export.recent", [], false) }}', {
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    var hasActive = renderExportNotifications(data.exports || []);
-                    if (notifPollTimer) clearTimeout(notifPollTimer);
-                    if (hasActive) {
-                        try { sessionStorage.setItem('has_active_export', '1'); } catch (e) {}
-                        notifPollTimer = setTimeout(function() { fetchExportNotifications(true); }, 3000);
-                    } else {
-                        try { sessionStorage.removeItem('has_active_export'); } catch (e) {}
-                        // Berhenti polling jika tidak ada export aktif
-                    }
-                })
-                .catch(function() {
-                    if (notifPollTimer) clearTimeout(notifPollTimer);
-                    try { sessionStorage.removeItem('has_active_export'); } catch (e) {}
-                });
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(res) {
+                        return res.json();
+                    })
+                    .then(function(data) {
+                        var hasActive = renderExportNotifications(data.exports || []);
+                        if (notifPollTimer) clearTimeout(notifPollTimer);
+                        if (hasActive) {
+                            try {
+                                sessionStorage.setItem('has_active_export', '1');
+                            } catch (e) {}
+                            notifPollTimer = setTimeout(function() {
+                                fetchExportNotifications(true);
+                            }, 3000);
+                        } else {
+                            try {
+                                sessionStorage.removeItem('has_active_export');
+                            } catch (e) {}
+                            // Berhenti polling jika tidak ada export aktif
+                        }
+                    })
+                    .catch(function() {
+                        if (notifPollTimer) clearTimeout(notifPollTimer);
+                        try {
+                            sessionStorage.removeItem('has_active_export');
+                        } catch (e) {}
+                    });
             }
 
             if (notifBtn && notifPanel) {

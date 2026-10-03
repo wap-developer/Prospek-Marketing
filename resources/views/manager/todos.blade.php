@@ -532,6 +532,11 @@
         flex-shrink: 0;
         box-shadow: 0 2px 6px rgba(220, 38, 38, 0.12);
     }
+    .pdf-icon-badge.is-img {
+        background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+        color: #1D4ED8;
+        box-shadow: 0 2px 6px rgba(29, 78, 216, 0.12);
+    }
     .pdf-icon-badge span {
         margin-top: -2px;
         letter-spacing: 0.05em;
@@ -724,6 +729,9 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+    }
+    .selected-file-badge.is-img {
+        background: #2563EB;
     }
     .selected-file-name {
         font-size: 13.5px;
@@ -1144,14 +1152,14 @@
                 <div id="taskPane1" class="task-pane" style="display: none;">
                     <div style="margin-bottom: 16px;">
                         <h4 style="font-size: 15px; font-weight: 800; color: #0F172A; margin: 0 0 2px;">Posting 12 Link Media Sosial</h4>
-                        <p style="font-size: 12.5px; color: #64748B; margin: 0;">3 Link per platform (Instagram, TikTok, FB, Snack Video). Manager dapat klik tombol Buka ↗ untuk langsung menuju URL postingan.</p>
+                        <p style="font-size: 12.5px; color: #64748B; margin: 0;">3 Link per platform (Instagram, TikTok, FB, Other Video). Manager dapat klik tombol Buka ↗ untuk langsung menuju URL postingan.</p>
                     </div>
                     @php
                         $platforms = [
                             'instagram' => ['label' => 'Instagram', 'icon_bg' => 'linear-gradient(135deg,#F58529,#DD2A7B,#8134AF)'],
                             'tiktok' => ['label' => 'TikTok', 'icon_bg' => '#000000'],
                             'facebook' => ['label' => 'Facebook', 'icon_bg' => '#1877F2'],
-                            'snack_video' => ['label' => 'Snack Video', 'icon_bg' => 'linear-gradient(135deg,#FF7E5F,#FEB47B)'],
+                            'snack_video' => ['label' => 'Other Video', 'icon_bg' => 'linear-gradient(135deg,#FF7E5F,#FEB47B)'],
                         ];
                     @endphp
                     <div style="display: flex; flex-direction: column; gap: 14px;">
@@ -1200,7 +1208,7 @@
                             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span style="font-size: 13px; font-weight: 800; color: #1E293B; text-transform: uppercase; letter-spacing: 0.03em;">
-                                        Berkas PDF Bukti Terkirim
+                                        Berkas Bukti Terkirim (PDF / Gambar)
                                     </span>
                                     <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #E2E8F0; color: #475569; font-weight: 700;">Maks. 1 File</span>
                                 </div>
@@ -1210,7 +1218,7 @@
                                     <div class="empty-file-icon">
                                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                                     </div>
-                                    <span style="font-size: 13px; font-weight: 700; color: #475569;">Belum ada file bukti PDF</span>
+                                    <span style="font-size: 13px; font-weight: 700; color: #475569;">Belum ada file bukti</span>
                                     <span style="font-size: 11.5px; color: #94A3B8; margin-top: 2px;">Marketing belum mengunggah file untuk tugas ini</span>
                                 </div>
                             </div>
@@ -1223,13 +1231,13 @@
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                                 </div>
                                 <p class="dropzone-primary-text">
-                                    <strong>Klik untuk telusuri</strong> atau tarik & letakkan file PDF di sini
+                                    <strong>Klik untuk telusuri</strong> atau tarik & letakkan file bukti di sini
                                 </p>
                                 <p class="dropzone-sub-text">
-                                    Format PDF (Maks. 10MB) • Otomatis menggantikan file bukti sebelumnya
+                                    Format PDF / Gambar (Maks. 10MB) • Otomatis menggantikan file bukti sebelumnya
                                 </p>
-                                <button type="button" class="dropzone-browse-btn" tabindex="-1">Pilih Dokumen PDF</button>
-                                <input type="file" name="pdfs[{{ $t }}][]" id="fileInput_{{ $t }}" accept=".pdf" style="display: none;" onchange="handleModalFileSelected(this, {{ $t }})">
+                                <button type="button" class="dropzone-browse-btn" tabindex="-1">Pilih File Bukti</button>
+                                <input type="file" name="pdfs[{{ $t }}][]" id="fileInput_{{ $t }}" accept=".pdf,image/*,.jpg,.jpeg,.png,.webp" style="display: none;" onchange="handleModalFileSelected(this, {{ $t }})">
                             </div>
 
                             {{-- Preview File Yang Baru Dipilih (Sebelum Disimpan) --}}
@@ -1312,7 +1320,7 @@
     let modalToastTimer = null;
 
     const tasksMeta = {
-        1: { title: 'Posting 12 Link Media Sosial', desc: 'Posting 12 link media sosial (Instagram, TikTok, Facebook, Snack Video).' },
+        1: { title: 'Posting 12 Link Media Sosial', desc: 'Posting 12 link media sosial (Instagram, TikTok, Facebook, Other Video).' },
         2: { title: 'Broadcast & Komentar Sosial Media', desc: 'Bukti PDF broadcast & komentar media sosial.' },
         3: { title: 'Mengiklankan Akun Instagram', desc: 'Bukti PDF promosi/iklan akun Instagram.' },
         4: { title: 'DM Brosur', desc: 'Bukti PDF DM brosur (Pak Sabar, Pak Henry, Marketing).' },
@@ -1435,6 +1443,14 @@
         if (dropzone) dropzone.classList.remove('dragover');
     }
 
+    function isAllowedBuktiFile(file) {
+        if (!file) return false;
+        const name = (file.name || '').toLowerCase();
+        const validExt = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'].some(ext => name.endsWith(ext));
+        const validMime = file.type === 'application/pdf' || file.type.startsWith('image/');
+        return validExt || validMime;
+    }
+
     function handleDrop(e, taskNum) {
         e.preventDefault();
         e.stopPropagation();
@@ -1444,8 +1460,8 @@
         const dt = e.dataTransfer;
         if (dt && dt.files && dt.files.length > 0) {
             const file = dt.files[0];
-            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-                alert('Hanya file dokumen format PDF yang diperbolehkan!');
+            if (!isAllowedBuktiFile(file)) {
+                alert('Hanya file dokumen PDF atau Gambar (JPG, PNG, WEBP) yang diperbolehkan!');
                 return;
             }
             const input = document.getElementById('fileInput_' + taskNum);
@@ -1474,12 +1490,20 @@
 
         if (input && input.files && input.files.length > 0) {
             const file = input.files[0];
-            if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-                alert('Hanya file dokumen format PDF yang diperbolehkan!');
+            if (!isAllowedBuktiFile(file)) {
+                alert('Hanya file bukti format PDF atau Gambar (JPG, PNG, WEBP) yang diperbolehkan!');
                 input.value = '';
                 if (preview) preview.style.display = 'none';
                 if (dropzone) dropzone.classList.remove('has-file');
                 return;
+            }
+
+            const isImg = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+            const badgeEl = preview ? preview.querySelector('.selected-file-badge') : null;
+            if (badgeEl) {
+                const ext = file.name.split('.').pop().toUpperCase();
+                badgeEl.textContent = isImg ? (ext === 'JPEG' ? 'JPG' : ext) : 'PDF';
+                badgeEl.classList.toggle('is-img', isImg);
             }
 
             if (nameEl) nameEl.innerText = file.name;
@@ -1627,7 +1651,7 @@
                     <div class="empty-file-icon">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </div>
-                    <span style="font-size: 13px; font-weight: 700; color: #475569;">Belum ada file bukti PDF</span>
+                    <span style="font-size: 13px; font-weight: 700; color: #475569;">Belum ada file bukti</span>
                     <span style="font-size: 11.5px; color: #94A3B8; margin-top: 2px;">Marketing belum mengunggah file untuk tugas ini</span>
                 </div>
             `;
@@ -1637,16 +1661,25 @@
         let html = '';
         pdfs.forEach((pdf, idx) => {
             const isNew = (isHighlightFirst && idx === 0);
+            const fileName = pdf.original_name || pdf.file_path || '';
+            const extMatch = fileName.match(/\.([a-z0-9]+)$/i);
+            const ext = extMatch ? extMatch[1].toLowerCase() : '';
+            const isImg = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+            const badgeText = isImg ? (ext === 'jpeg' ? 'JPG' : ext.toUpperCase()) : 'PDF';
+            const iconSvg = isImg
+                ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
+                : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+
             html += `
                 <div class="modal-file-card ${isNew ? 'modal-file-card-new' : ''}" id="pdfCard_${pdf.id}">
                     <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-                        <div class="pdf-icon-badge">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                            <span>PDF</span>
+                        <div class="pdf-icon-badge ${isImg ? 'is-img' : ''}">
+                            ${iconSvg}
+                            <span>${badgeText}</span>
                         </div>
                         <div style="min-width: 0;">
-                            <div class="pdf-filename" title="${pdf.original_name}">
-                                ${pdf.original_name}
+                            <div class="pdf-filename" title="${fileName}">
+                                ${fileName}
                                 ${isNew ? '<span class="badge-new-upload">Baru Diunggah</span>' : ''}
                             </div>
                             <div class="pdf-filemeta">

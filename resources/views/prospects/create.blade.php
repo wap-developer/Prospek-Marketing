@@ -336,6 +336,20 @@
         line-height: 1.5;
     }
     .pc-tips li svg { flex-shrink: 0; margin-top: 1px; color: var(--primary-500); }
+
+    @keyframes pcSpin {
+        to { transform: rotate(360deg); }
+    }
+    .pc-spinner {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #fff;
+        animation: pcSpin .8s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+    }
 </style>
 @endpush
 
@@ -373,10 +387,21 @@
                 <div class="pc-grid-2">
                     <div class="pc-field">
                         <label>Nomor Telepon / WhatsApp <span class="req">*</span></label>
-                        <input type="text" name="client_phone" class="pc-input @if($errors->has('client_phone')) is-invalid @endif" value="{{ old('client_phone') }}" required placeholder="08xxx atau 62xxx" maxlength="32" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-phone-input>
+                        <input type="text" name="client_phone" id="inputClientPhone" class="pc-input @if($errors->has('client_phone')) is-invalid @endif" value="{{ old('client_phone') }}" required placeholder="08xxx atau 62xxx" maxlength="32" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-phone-input>
                         <div class="hint">Hanya angka (0-9), contoh: 081234567890</div>
+
+                        <div id="phone-duplicate-alert" style="display:none; margin-top:8px; padding:10px 12px; background:#FEF2F2; border-left:4px solid #EF4444; border-radius:8px;">
+                            <div style="display:flex; align-items:flex-start; gap:8px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span id="phone-duplicate-msg" style="font-size:12px; color:#991B1B; font-weight:600; line-height:1.4;"></span>
+                            </div>
+                        </div>
+
                         @error('client_phone')
-                            <div class="pc-error">{{ $message }}</div>
+                            <div class="pc-error" style="margin-top:8px; padding:10px 12px; background:#FEF2F2; border-left:4px solid #EF4444; border-radius:8px; display:flex; align-items:flex-start; gap:8px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span style="font-size:12px; color:#991B1B; font-weight:600; line-height:1.4;">{{ $message }}</span>
+                            </div>
                         @enderror
                     </div>
 
@@ -475,9 +500,9 @@
                 <span class="pc-submit-meta">Field bertanda <span style="color:#DC2626;">*</span> wajib diisi.</span>
                 <div class="pc-submit-actions">
                     <a href="{{ route('prospects.index') }}" class="btn btn-secondary">Batal</a>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" id="btnSubmitProspect" class="btn btn-primary">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                        Simpan Prospek
+                        <span>Simpan Prospek</span>
                     </button>
                 </div>
             </div>
@@ -530,6 +555,7 @@
             noCalendar: true,
             dateFormat: 'H:i',
             time_24hr: true,
+            minuteIncrement: 1,
             locale: 'id',
             allowInput: true,
             defaultDate: document.querySelector('.fp-time').value || null
@@ -554,6 +580,111 @@
                 if (!/^[0-9]$/.test(e.key)) e.preventDefault();
             });
         });
+
+        // Realtime phone duplicate check & marketing owner alert
+        (function() {
+            var phoneInput = document.getElementById('inputClientPhone');
+            var dupAlert = document.getElementById('phone-duplicate-alert');
+            var dupMsg = document.getElementById('phone-duplicate-msg');
+            var phoneCheckTimer = null;
+            var isDuplicatePhone = false;
+
+            function checkPhoneAvailability(phone) {
+                if (!phone || phone.length < 8) {
+                    if (dupAlert) dupAlert.style.display = 'none';
+                    if (phoneInput && !{{ $errors->has('client_phone') ? 'true' : 'false' }}) {
+                        phoneInput.classList.remove('is-invalid');
+                    }
+                    isDuplicatePhone = false;
+                    return;
+                }
+
+                fetch('{{ route('prospects.check-phone') }}?phone=' + encodeURIComponent(phone), {
+                    headers: { 'Accept': 'application/json' }
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.exists) {
+                        isDuplicatePhone = true;
+                        if (phoneInput) phoneInput.classList.add('is-invalid');
+                        if (dupMsg) dupMsg.textContent = data.message;
+                        if (dupAlert) dupAlert.style.display = 'block';
+                    } else {
+                        isDuplicatePhone = false;
+                        if (dupAlert) dupAlert.style.display = 'none';
+                        if (phoneInput && !{{ $errors->has('client_phone') ? 'true' : 'false' }}) {
+                            phoneInput.classList.remove('is-invalid');
+                        }
+                    }
+                })
+                .catch(function(err) {
+                    console.error('Check phone error:', err);
+                });
+            }
+
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function() {
+                    clearTimeout(phoneCheckTimer);
+                    var val = this.value.trim();
+                    phoneCheckTimer = setTimeout(function() {
+                        checkPhoneAvailability(val);
+                    }, 350);
+                });
+
+                phoneInput.addEventListener('blur', function() {
+                    clearTimeout(phoneCheckTimer);
+                    checkPhoneAvailability(this.value.trim());
+                });
+
+                if (phoneInput.value.trim().length >= 8) {
+                    checkPhoneAvailability(phoneInput.value.trim());
+                }
+
+                var createForm = phoneInput.closest('form');
+                var submitBtn = document.getElementById('btnSubmitProspect');
+                var isSubmitting = false;
+
+                if (createForm) {
+                    createForm.addEventListener('submit', function(e) {
+                        if (isDuplicatePhone) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            var msg = dupMsg ? dupMsg.textContent : 'Nomor prospek sudah ada di sistem.';
+                            if (window.AppSwal && AppSwal.fire) {
+                                AppSwal.fire({
+                                    icon: 'error',
+                                    title: 'Nomor Prospek Sudah Terdaftar',
+                                    html: '<p style="font-size:13.5px; color:var(--text-secondary); margin:0; line-height:1.5;">' + msg + '</p>',
+                                    confirmButtonText: 'Tutup'
+                                });
+                            } else {
+                                alert(msg);
+                            }
+                            phoneInput.focus();
+                            return false;
+                        }
+
+                        if (isSubmitting) {
+                            e.preventDefault();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+
+                        if (!createForm.checkValidity()) {
+                            return;
+                        }
+
+                        isSubmitting = true;
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            submitBtn.style.opacity = '0.75';
+                            submitBtn.style.cursor = 'not-allowed';
+                            submitBtn.innerHTML = '<span class="pc-spinner"></span> <span>Menyimpan...</span>';
+                        }
+                    });
+                }
+            }
+        })();
     </script>
     @endpush
 @endsection

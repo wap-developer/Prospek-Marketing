@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::get('prospects', [ProspectController::class, 'index'])->name('prospects.index');
     Route::get('prospects/export', [ProspectController::class, 'export'])->name('prospects.export');
     Route::middleware('role:cs,super_admin')->group(function () {
+        Route::get('prospects/check-phone', [ProspectController::class, 'checkPhone'])->name('prospects.check-phone');
         Route::get('prospects/create', [ProspectController::class, 'create'])->name('prospects.create');
         Route::post('prospects', [ProspectController::class, 'store'])->name('prospects.store');
     });

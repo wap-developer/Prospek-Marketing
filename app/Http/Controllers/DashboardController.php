@@ -23,6 +23,7 @@ class DashboardController extends Controller
         ];
 
         if ($role === 'marketing') {
+            $today = today();
             $data['myProspek'] = Prospect::with('status')
                 ->where('marketing_user_id', $user->id)
                 ->latest('entry_date')
@@ -30,10 +31,10 @@ class DashboardController extends Controller
                 ->get();
             $data['todayTodo'] = Todo::with(['links', 'pdfs'])
                 ->where('user_id', $user->id)
-                ->whereDate('date', today())
+                ->whereDate('date', $today)
                 ->first();
             $data['prospekToday'] = Prospect::where('marketing_user_id', $user->id)
-                ->whereDate('entry_date', today())
+                ->whereDate('entry_date', $today)
                 ->count();
             $data['prospekMonth'] = Prospect::where('marketing_user_id', $user->id)
                 ->whereMonth('entry_date', now()->month)
@@ -50,7 +51,64 @@ class DashboardController extends Controller
                 ->toArray();
             $data['prospekOpen'] = $statusCounts['open'] ?? 0;
             $data['prospekClosing'] = $statusCounts['closing'] ?? 0;
-            $data['prospekCancel'] = $statusCounts['cancel'] ?? 0;
+
+            // Hitung kepatuhan To Do Hari Ini (7 Tugas)
+            $todayTodo = $data['todayTodo'];
+            $linksCount = $todayTodo?->links->count() ?? 0;
+            $linkTaskDone = $linksCount >= 12 ? 1 : 0;
+
+            $pdfTaskKeys = [2, 3, 4, 5, 6];
+            $pdfTasksFilled = $todayTodo
+                ? $todayTodo->pdfs->groupBy('task')->keys()->intersect($pdfTaskKeys)->count()
+                : 0;
+
+            // Tugas 7: Prospek hari ini & update catatan
+            $todayProspects = Prospect::where('marketing_user_id', $user->id)
+                ->whereDate('entry_date', $today)
+                ->get(['id', 'note']);
+
+            $hasGeneralNote = ! empty(trim((string) ($todayTodo?->prospect_progress_note ?? '')));
+            $task7Done = false;
+
+            if ($todayProspects->isNotEmpty()) {
+                $prospectIds = $todayProspects->pluck('id');
+                $weeklyUpdatesCount = ProspectWeeklyUpdate::whereIn('prospect_id', $prospectIds)
+                    ->whereNotNull('note')
+                    ->where('note', '!=', '')
+                    ->distinct('prospect_id')
+                    ->count('prospect_id');
+
+                $updatedCount = 0;
+                foreach ($todayProspects as $p) {
+                    if (! empty(trim((string) $p->note))) {
+                        $updatedCount++;
+                    }
+                }
+                $task7Done = ($updatedCount >= $todayProspects->count()) || ($weeklyUpdatesCount >= $todayProspects->count());
+            } elseif ($hasGeneralNote) {
+                $task7Done = true;
+            }
+
+            $tasksDone = $linkTaskDone + $pdfTasksFilled + ($task7Done ? 1 : 0);
+            $totalTasks = 7;
+            $allDone = $tasksDone >= $totalTasks;
+
+            $state = $allDone ? 'ok' : ($tasksDone > 0 ? 'partial' : 'empty');
+            $stateLabel = $allDone ? 'Lengkap' : ($tasksDone > 0 ? 'Sebagian' : 'Belum Input');
+
+            $data['todayTodoStats'] = [
+                'links_count' => $linksCount,
+                'target_links' => 12,
+                'link_task_done' => $linkTaskDone,
+                'pdf_tasks_filled' => $pdfTasksFilled,
+                'target_pdf_tasks' => 5,
+                'task7_done' => $task7Done ? 1 : 0,
+                'tasks_done' => $tasksDone,
+                'total_tasks' => $totalTasks,
+                'pct' => min(100, round(($tasksDone / $totalTasks) * 100)),
+                'state' => $state,
+                'state_label' => $stateLabel,
+            ];
         }
 
         if (in_array($role, ['manager_marketing', 'super_admin'], true)) {
@@ -79,17 +137,6 @@ class DashboardController extends Controller
                 ? round((($closingMonth - $closingPrevMonth) / $closingPrevMonth) * 100, 1)
                 : ($closingMonth > 0 ? 100 : 0);
 
-            // Cancel bulan ini vs bulan sebelumnya
-            $cancelMonth = Prospect::whereBetween('entry_date', [$currentMonthStart, $currentMonthEnd])
-                ->whereHas('status', fn ($q) => $q->where('slug', 'cancel'))
-                ->count();
-            $cancelPrevMonth = Prospect::whereBetween('entry_date', [$prevMonthStart, $prevMonthEnd])
-                ->whereHas('status', fn ($q) => $q->where('slug', 'cancel'))
-                ->count();
-            $percentageCancel = $cancelPrevMonth > 0
-                ? round((($cancelMonth - $cancelPrevMonth) / $cancelPrevMonth) * 100, 1)
-                : ($cancelMonth > 0 ? 100 : 0);
-
             // Nominal Closing bulan ini
             $nominalMonth = Prospect::whereBetween('entry_date', [$currentMonthStart, $currentMonthEnd])
                 ->whereHas('status', fn ($q) => $q->where('slug', 'closing'))
@@ -106,9 +153,6 @@ class DashboardController extends Controller
                 $closing = Prospect::whereBetween('entry_date', [$mStart, $mEnd])
                     ->whereHas('status', fn ($q) => $q->where('slug', 'closing'))
                     ->count();
-                $cancel = Prospect::whereBetween('entry_date', [$mStart, $mEnd])
-                    ->whereHas('status', fn ($q) => $q->where('slug', 'cancel'))
-                    ->count();
                 $open = Prospect::whereBetween('entry_date', [$mStart, $mEnd])
                     ->whereHas('status', fn ($q) => $q->where('slug', 'open'))
                     ->count();
@@ -119,7 +163,6 @@ class DashboardController extends Controller
                     'month_key' => $mDate->format('Y-m'),
                     'total' => $total,
                     'closing' => $closing,
-                    'cancel' => $cancel,
                     'open' => $open,
                     'is_current' => $i === 0,
                 ];
@@ -133,10 +176,6 @@ class DashboardController extends Controller
             $data['closingMonth'] = $closingMonth;
             $data['closingPrevMonth'] = $closingPrevMonth;
             $data['percentageClosing'] = $percentageClosing;
-
-            $data['cancelMonth'] = $cancelMonth;
-            $data['cancelPrevMonth'] = $cancelPrevMonth;
-            $data['percentageCancel'] = $percentageCancel;
 
             $data['nominalMonth'] = $nominalMonth;
             $data['monthlyComparison'] = $monthlyComparison;

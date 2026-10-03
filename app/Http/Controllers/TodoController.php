@@ -21,7 +21,7 @@ class TodoController extends Controller
         ['key' => 'instagram',   'label' => 'Instagram'],
         ['key' => 'tiktok',      'label' => 'TikTok'],
         ['key' => 'facebook',    'label' => 'Facebook'],
-        ['key' => 'snack_video', 'label' => 'Snack Video'],
+        ['key' => 'snack_video', 'label' => 'Other Video'],
     ];
 
     private const PDF_TASKS = [
@@ -231,6 +231,12 @@ class TodoController extends Controller
             'prospect_updates' => ['nullable', 'array'],
             'single_prospect_id' => ['nullable', 'integer'],
             'single_note' => ['nullable', 'string'],
+            'pdfs' => ['nullable', 'array'],
+            'pdfs.*' => ['nullable'],
+            'pdfs.*.*' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:102400'],
+        ], [
+            'pdfs.*.*.mimes' => 'Format file bukti harus berupa PDF atau Gambar (JPG, JPEG, PNG, WEBP).',
+            'pdfs.*.*.max' => 'Ukuran file bukti maksimal 100MB.',
         ]);
 
         $date = Carbon::parse($data['date']);

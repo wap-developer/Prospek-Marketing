@@ -57,7 +57,7 @@ class ExportTodosJob implements ShouldQueue
         $queryEnd = $monthEnd->copy()->endOfWeek(Carbon::SUNDAY);
 
         $tasksList = [
-            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Snack)'],
+            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Other Video)'],
             2 => ['title' => 'Broadcast & Komentar Sosial Media', 'desc' => 'Bukti PDF broadcast & komentar'],
             3 => ['title' => 'Mengiklankan Akun Instagram', 'desc' => 'Bukti PDF iklan Instagram'],
             4 => ['title' => 'DM Brosur', 'desc' => 'Bukti PDF DM brosur (Pak Sabar, Pak Henry, Marketing)'],

@@ -11,8 +11,12 @@ use App\Models\Sender;
 use App\Models\Service;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -39,15 +43,28 @@ class ProspectController extends Controller
             $query->where('marketing_user_id', $user->id);
         }
 
-        if ($request->filled('month')) {
-            $query->whereMonth('entry_date', $request->integer('month'));
-            if ($request->filled('year')) {
+        $startDate = $request->filled('start_date') ? $request->input('start_date') : null;
+        $endDate = $request->filled('end_date') ? $request->input('end_date') : null;
+
+        // Tanggal awal dan tanggal akhir harus keduanya dipilih untuk filter rentang tanggal
+        if ($startDate && $endDate) {
+            $start = min($startDate, $endDate);
+            $end = max($startDate, $endDate);
+            $query->whereDate('entry_date', '>=', $start)
+                  ->whereDate('entry_date', '<=', $end);
+        }
+
+        if (! $startDate && ! $endDate) {
+            if ($request->filled('month')) {
+                $query->whereMonth('entry_date', $request->integer('month'));
+                if ($request->filled('year')) {
+                    $query->whereYear('entry_date', $request->integer('year'));
+                } else {
+                    $query->whereYear('entry_date', (int) now()->year);
+                }
+            } elseif ($request->filled('year')) {
                 $query->whereYear('entry_date', $request->integer('year'));
-            } else {
-                $query->whereYear('entry_date', (int) now()->year);
             }
-        } elseif ($request->filled('year')) {
-            $query->whereYear('entry_date', $request->integer('year'));
         }
 
         if ($request->filled('status_id')) {
@@ -61,13 +78,45 @@ class ProspectController extends Controller
             $query->where('client_phone', 'like', $term);
         }
 
-        $prospects = $query->paginate(15)->withQueryString();
+        // Scope pemisah Grup Iklan vs Selain Grup Iklan
+        $isIklanScope = fn ($q) => $q->whereHas('group', fn ($g) => $g->whereRaw('LOWER(name) LIKE ?', ['%iklan%']));
+        $isNonIklanScope = fn ($q) => $q->whereDoesntHave('group', fn ($g) => $g->whereRaw('LOWER(name) LIKE ?', ['%iklan%']));
+
+        // Query Non-Iklan (Tabel Atas)
+        $nonIklanQuery = (clone $query)->tap($isNonIklanScope);
+        $nonIklanTotal = (clone $nonIklanQuery)->count();
+        $nonIklanOpen = (clone $nonIklanQuery)->whereHas('status', fn ($s) => $s->where('slug', 'open'))->count();
+        $nonIklanClosing = (clone $nonIklanQuery)->whereHas('status', fn ($s) => $s->where('slug', 'closing'))->count();
+        $prospects = (clone $nonIklanQuery)->paginate(15, ['*'], 'page')->withQueryString();
+
+        // Query Iklan (Tabel Bawah Khusus Grup Iklan)
+        $iklanQuery = (clone $query)->tap($isIklanScope);
+        $iklanTotal = (clone $iklanQuery)->count();
+        $iklanOpen = (clone $iklanQuery)->whereHas('status', fn ($s) => $s->where('slug', 'open'))->count();
+        $iklanClosing = (clone $iklanQuery)->whereHas('status', fn ($s) => $s->where('slug', 'closing'))->count();
+        $iklanProspects = (clone $iklanQuery)->paginate(15, ['*'], 'page_iklan')->withQueryString();
+
+        $totalAll = $nonIklanTotal + $iklanTotal;
 
         return view('prospects.index', [
             'prospects' => $prospects,
-            'statuses' => ProspectStatus::orderBy('id')->get(),
+            'nonIklanStats' => [
+                'total' => $nonIklanTotal,
+                'open' => $nonIklanOpen,
+                'closing' => $nonIklanClosing,
+            ],
+            'iklanProspects' => $iklanProspects,
+            'iklanStats' => [
+                'total' => $iklanTotal,
+                'open' => $iklanOpen,
+                'closing' => $iklanClosing,
+            ],
+            'totalAll' => $totalAll,
+            'statuses' => ProspectStatus::where('slug', '!=', 'cancel')->orderBy('id')->get(),
             'marketings' => User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->orderBy('name')->get(),
             'role' => $role,
+            'startDate' => $request->input('start_date'),
+            'endDate' => $request->input('end_date'),
             'month' => $request->filled('month') ? $request->integer('month') : null,
             'year' => $request->filled('year') ? $request->integer('year') : null,
         ]);
@@ -90,16 +139,28 @@ class ProspectController extends Controller
             $query->where('marketing_user_id', $user->id);
         }
 
+        $startDate = $request->filled('start_date') ? $request->input('start_date') : null;
+        $endDate = $request->filled('end_date') ? $request->input('end_date') : null;
         $month = $request->filled('month') ? $request->integer('month') : null;
         $year = $request->filled('year') ? $request->integer('year') : ($month ? (int) now()->year : null);
 
-        if ($month) {
-            $query->whereMonth('entry_date', $month);
-            if ($year) {
+        // Tanggal awal dan tanggal akhir harus keduanya dipilih untuk filter rentang tanggal
+        if ($startDate && $endDate) {
+            $start = min($startDate, $endDate);
+            $end = max($startDate, $endDate);
+            $query->whereDate('entry_date', '>=', $start);
+            $query->whereDate('entry_date', '<=', $end);
+        }
+
+        if (! $startDate && ! $endDate) {
+            if ($month) {
+                $query->whereMonth('entry_date', $month);
+                if ($year) {
+                    $query->whereYear('entry_date', $year);
+                }
+            } elseif ($year) {
                 $query->whereYear('entry_date', $year);
             }
-        } elseif ($year) {
-            $query->whereYear('entry_date', $year);
         }
 
         if ($request->filled('status_id')) {
@@ -113,6 +174,15 @@ class ProspectController extends Controller
             $query->where('client_phone', 'like', $term);
         }
 
+        if ($request->filled('group_type')) {
+            $groupType = $request->string('group_type')->toString();
+            if ($groupType === 'iklan') {
+                $query->whereHas('group', fn ($g) => $g->whereRaw('LOWER(name) LIKE ?', ['%iklan%']));
+            } elseif ($groupType === 'non_iklan') {
+                $query->whereDoesntHave('group', fn ($g) => $g->whereRaw('LOWER(name) LIKE ?', ['%iklan%']));
+            }
+        }
+
         $prospects = $query->get();
 
         $spreadsheet = new Spreadsheet();
@@ -120,17 +190,37 @@ class ProspectController extends Controller
         $sheet->setTitle('Data Prospek');
         $sheet->setShowGridLines(true);
 
+        $categorySuffix = match ($request->string('group_type')->toString()) {
+            'iklan' => ' (GRUP IKLAN)',
+            'non_iklan' => ' (NON-IKLAN)',
+            default => '',
+        };
+        $filenameCategory = match ($request->string('group_type')->toString()) {
+            'iklan' => 'Iklan_',
+            'non_iklan' => 'Non_Iklan_',
+            default => '',
+        };
+
         // Header Title
-        if ($month && $year) {
+        if ($startDate && $endDate) {
+            $start = min($startDate, $endDate);
+            $end = max($startDate, $endDate);
+            $startFormatted = Carbon::parse($start)->format('d_m_Y');
+            $endFormatted = Carbon::parse($end)->format('d_m_Y');
+            $startHuman = Carbon::parse($start)->translatedFormat('d M Y');
+            $endHuman = Carbon::parse($end)->translatedFormat('d M Y');
+            $titleText = 'PROSPEK MARKETING HIVE FIVE' . $categorySuffix . ' PERIODE ' . strtoupper($startHuman) . ' S/D ' . strtoupper($endHuman);
+            $filenamePeriod = $filenameCategory . $startFormatted . '_sd_' . $endFormatted;
+        } elseif ($month && $year) {
             $monthName = Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y');
-            $titleText = 'PROSPEK MARKETING HIVE FIVE PERIODE ' . strtoupper($monthName);
-            $filenamePeriod = str_replace(' ', '_', $monthName);
+            $titleText = 'PROSPEK MARKETING HIVE FIVE' . $categorySuffix . ' PERIODE ' . strtoupper($monthName);
+            $filenamePeriod = $filenameCategory . str_replace(' ', '_', $monthName);
         } elseif ($year) {
-            $titleText = 'PROSPEK MARKETING HIVE FIVE PERIODE TAHUN ' . $year;
-            $filenamePeriod = 'Tahun_' . $year;
+            $titleText = 'PROSPEK MARKETING HIVE FIVE' . $categorySuffix . ' PERIODE TAHUN ' . $year;
+            $filenamePeriod = $filenameCategory . 'Tahun_' . $year;
         } else {
-            $titleText = 'PROSPEK MARKETING HIVE FIVE PERIODE SEMUA DATA';
-            $filenamePeriod = 'Semua_Periode';
+            $titleText = 'PROSPEK MARKETING HIVE FIVE' . $categorySuffix . ' PERIODE SEMUA DATA';
+            $filenamePeriod = $filenameCategory . 'Semua_Periode';
         }
 
         // Row 1: Title
@@ -307,16 +397,66 @@ class ProspectController extends Controller
         $role = $request->user()->role?->slug;
         abort_unless(in_array($role, ['cs', 'super_admin'], true), 403);
 
-        $data = $this->validateProspect($request);
-        $data['created_by'] = $request->user()->id;
-        $data['status_id'] = ProspectStatus::where('slug', 'open')->value('id');
+        $phoneDigits = preg_replace('/\D+/', '', (string) $request->input('client_phone', ''));
 
-        if (empty($data['source_id'])) {
-            $defaultSource = ProspectSource::firstOrCreate(['name' => '-']);
-            $data['source_id'] = $defaultSource->id;
+        // Deteksi double-submit jika prospek dengan nomor yang sama baru saja dibuat oleh user ini dalam 10 detik terakhir
+        if ($phoneDigits !== '') {
+            $variants = self::getPhoneVariants($phoneDigits);
+            $recentlyCreated = Prospect::whereIn('client_phone', $variants)
+                ->where('created_by', $request->user()->id)
+                ->where('created_at', '>=', now()->subSeconds(10))
+                ->latest('id')
+                ->first();
+
+            if ($recentlyCreated) {
+                return redirect()->route('prospects.index')->with('status', 'Prospek berhasil dibuat.');
+            }
         }
 
-        Prospect::create($data);
+        $lock = null;
+        if ($phoneDigits !== '') {
+            try {
+                $lock = Cache::lock('store_prospect_' . $phoneDigits, 5);
+                $lock->block(3);
+            } catch (\Throwable $e) {
+                $lock = null;
+            }
+        }
+
+        try {
+            // Cek ulang setelah lock berhasil didapatkan
+            if ($phoneDigits !== '') {
+                $variants = self::getPhoneVariants($phoneDigits);
+                $recentlyCreated = Prospect::whereIn('client_phone', $variants)
+                    ->where('created_by', $request->user()->id)
+                    ->where('created_at', '>=', now()->subSeconds(10))
+                    ->latest('id')
+                    ->first();
+
+                if ($recentlyCreated) {
+                    return redirect()->route('prospects.index')->with('status', 'Prospek berhasil dibuat.');
+                }
+            }
+
+            $data = $this->validateProspect($request);
+            $data['created_by'] = $request->user()->id;
+            $data['status_id'] = ProspectStatus::where('slug', 'open')->value('id');
+
+            if (empty($data['source_id'])) {
+                $defaultSource = ProspectSource::firstOrCreate(['name' => '-']);
+                $data['source_id'] = $defaultSource->id;
+            }
+
+            Prospect::create($data);
+        } finally {
+            if ($lock) {
+                try {
+                    $lock->release();
+                } catch (\Throwable $e) {
+                    // Ignore release errors
+                }
+            }
+        }
 
         return redirect()->route('prospects.index')->with('status', 'Prospek berhasil dibuat.');
     }
@@ -348,6 +488,7 @@ class ProspectController extends Controller
         return view('prospects.edit', array_merge(
             [
                 'prospect' => $prospect,
+                'role' => $request->user()->role?->slug,
                 'weeklyUpdates' => $weeklyUpdates,
                 'updatesByWeek' => $updatesByWeek,
                 'accessByWeek' => $accessByWeek,
@@ -363,10 +504,23 @@ class ProspectController extends Controller
     {
         $this->authorizeProspectAccess($request, $prospect, editable: true);
 
-        $data = $this->validateProspect($request, partial: true);
+        $data = $this->validateProspect($request, partial: true, ignoreProspectId: $prospect->id);
+
+        if (array_key_exists('source_id', $data) && empty($data['source_id'])) {
+            $defaultSource = ProspectSource::firstOrCreate(['name' => '-']);
+            $data['source_id'] = $defaultSource->id;
+        }
 
         if (array_key_exists('status_id', $data)) {
             $statusSlug = ProspectStatus::find($data['status_id'])?->slug;
+
+            if ($statusSlug === 'cancel') {
+                $clientPhone = $prospect->client_phone;
+                $prospect->delete();
+
+                return redirect()->route('prospects.index')->with('status', "Prospek {$clientPhone} berhasil dicancel dan dihapus dari sistem.");
+            }
+
             if ($statusSlug === 'closing' && empty($data['closed_at'])) {
                 $data['closed_at'] = now();
             }
@@ -394,6 +548,10 @@ class ProspectController extends Controller
             }
         }
 
+        if ($request->user()->role?->slug === 'cs') {
+            return redirect()->route('prospects.index')->with('status', 'Data prospek berhasil diperbarui.');
+        }
+
         return redirect()->route('prospects.edit', $prospect)->with('status', 'Prospek diperbarui.');
     }
 
@@ -405,7 +563,48 @@ class ProspectController extends Controller
         return redirect()->route('prospects.index')->with('status', 'Prospek dihapus.');
     }
 
-    private function validateProspect(Request $request, bool $partial = false): array
+    public function checkPhone(Request $request): JsonResponse
+    {
+        $role = $request->user()->role?->slug;
+        abort_unless(in_array($role, ['cs', 'super_admin'], true), 403);
+
+        $phone = (string) $request->input('phone', '');
+        $ignoreId = $request->filled('ignore_id') ? (int) $request->input('ignore_id') : null;
+        $existing = $this->findExistingProspectByPhone($phone, $ignoreId);
+
+        if (! $existing) {
+            return response()->json(['exists' => false]);
+        }
+
+        $marketingName = $existing->marketing?->name ?? 'Marketing Lain';
+        $serviceName = $existing->service?->name;
+        $statusName = $existing->status?->name;
+        $entryDate = $existing->entry_date ? $existing->entry_date->translatedFormat('d M Y') : null;
+
+        $message = "Nomor prospek ini sudah ada di marketing {$marketingName}";
+        if ($serviceName) {
+            $message .= " (Layanan: {$serviceName}";
+            if ($statusName) {
+                $message .= ", Status: {$statusName}";
+            }
+            if ($entryDate) {
+                $message .= ", Masuk: {$entryDate}";
+            }
+            $message .= ")";
+        }
+        $message .= '.';
+
+        return response()->json([
+            'exists' => true,
+            'message' => $message,
+            'marketing' => $marketingName,
+            'service' => $serviceName,
+            'status' => $statusName,
+            'entry_date' => $entryDate,
+        ]);
+    }
+
+    private function validateProspect(Request $request, bool $partial = false, ?int $ignoreProspectId = null): array
     {
         if ($request->has('nominal_closing')) {
             $rawNominal = $request->input('nominal_closing');
@@ -416,9 +615,8 @@ class ProspectController extends Controller
         }
 
         $required = $partial ? 'sometimes' : 'required';
-        $closingRequired = $partial ? 'sometimes|required' : 'required';
 
-        return $request->validate([
+        $validator = Validator::make($request->all(), [
             'client_phone' => [$required, 'string', 'max:32', 'regex:/^[0-9]+$/'],
             'service_id' => [$required, 'exists:services,id'],
             'entry_date' => [$required, 'date'],
@@ -432,9 +630,86 @@ class ProspectController extends Controller
             'note' => [$partial ? 'sometimes' : 'nullable', 'nullable', 'string', 'max:2000'],
             'closed_at' => [$partial ? 'sometimes' : 'nullable', 'nullable', 'date'],
         ], [
+            'client_phone.required' => 'Nomor Telepon / WhatsApp wajib diisi.',
             'client_phone.regex' => 'Nomor telepon hanya boleh berisi angka (0-9).',
             'client_phone.max' => 'Nomor telepon maksimal 32 digit.',
         ]);
+
+        $validator->after(function ($v) use ($request, $ignoreProspectId) {
+            $phone = (string) $request->input('client_phone', '');
+            if ($phone !== '') {
+                $existing = $this->findExistingProspectByPhone($phone, $ignoreProspectId);
+                if ($existing) {
+                    $marketingName = $existing->marketing?->name ?? 'Marketing Lain';
+                    $serviceName = $existing->service?->name;
+                    $statusName = $existing->status?->name;
+                    $entryDate = $existing->entry_date ? $existing->entry_date->translatedFormat('d M Y') : null;
+
+                    $msg = "Nomor prospek ini sudah ada di marketing {$marketingName}";
+                    if ($serviceName) {
+                        $msg .= " (Layanan: {$serviceName}";
+                        if ($statusName) {
+                            $msg .= ", Status: {$statusName}";
+                        }
+                        if ($entryDate) {
+                            $msg .= ", Masuk: {$entryDate}";
+                        }
+                        $msg .= ")";
+                    }
+                    $msg .= '.';
+
+                    $v->errors()->add('client_phone', $msg);
+                }
+            }
+        });
+
+        return $validator->validate();
+    }
+
+    public static function getPhoneVariants(string $phone): array
+    {
+        $digits = preg_replace('/\D+/', '', $phone);
+        if (empty($digits)) {
+            return [];
+        }
+
+        $variants = [$digits];
+
+        if (str_starts_with($digits, '62')) {
+            $withoutCountry = substr($digits, 2);
+            if ($withoutCountry !== '') {
+                $variants[] = '0' . $withoutCountry;
+                $variants[] = $withoutCountry;
+            }
+        } elseif (str_starts_with($digits, '0')) {
+            $withoutZero = substr($digits, 1);
+            if ($withoutZero !== '') {
+                $variants[] = '62' . $withoutZero;
+                $variants[] = $withoutZero;
+            }
+        } else {
+            $variants[] = '0' . $digits;
+            $variants[] = '62' . $digits;
+        }
+
+        return array_values(array_unique(array_filter($variants)));
+    }
+
+    private function findExistingProspectByPhone(string $phone, ?int $ignoreProspectId = null): ?Prospect
+    {
+        $variants = self::getPhoneVariants($phone);
+        if (empty($variants)) {
+            return null;
+        }
+
+        $query = Prospect::with(['marketing', 'service', 'status'])
+            ->whereIn('client_phone', $variants);
+
+        if ($ignoreProspectId !== null) {
+            $query->where('id', '!=', $ignoreProspectId);
+        }
+
+        return $query->latest('entry_date')->latest('entry_time')->first();
     }
 
     private function formOptions(): array

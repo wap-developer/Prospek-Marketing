@@ -56,7 +56,7 @@ class ManagerController extends Controller
 
         // Standard 7 Tugas Harian
         $tasksList = [
-            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => 'Mengisi 12 link postingan (Instagram, TikTok, FB, Snack)', 'type' => 'link'],
+            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => 'Mengisi 12 link postingan (Instagram, TikTok, FB, Other Video)', 'type' => 'link'],
             2 => ['title' => 'Broadcast & Komentar Sosial Media', 'desc' => 'Upload bukti PDF broadcast & komentar', 'type' => 'pdf'],
             3 => ['title' => 'Mengiklankan Akun Instagram', 'desc' => 'Upload bukti PDF iklan Instagram', 'type' => 'pdf'],
             4 => ['title' => 'DM Brosur', 'desc' => 'Upload bukti PDF DM brosur (Pak Sabar, Pak Henry, Marketing)', 'type' => 'pdf'],
@@ -168,7 +168,7 @@ class ManagerController extends Controller
         $queryEnd = $monthEnd->copy()->endOfWeek(Carbon::SUNDAY);
 
         $tasksList = [
-            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Snack)'],
+            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Other Video)'],
             2 => ['title' => 'Broadcast & Komentar Sosial Media', 'desc' => 'Bukti PDF broadcast & komentar'],
             3 => ['title' => 'Mengiklankan Akun Instagram', 'desc' => 'Bukti PDF iklan Instagram'],
             4 => ['title' => 'DM Brosur', 'desc' => 'Bukti PDF DM brosur (Pak Sabar, Pak Henry, Marketing)'],
@@ -393,7 +393,15 @@ class ManagerController extends Controller
         abort_unless($export->user_id === $request->user()->id || $request->user()->role?->slug === 'super_admin', 403);
 
         if (in_array($export->status, ['pending', 'processing'], true)) {
-            self::ensureQueueWorkerRunning();
+            // Deteksi jika antrean macet di server (worker tidak jalan > 3 menit dan progress 0)
+            if ($export->created_at && $export->created_at->diffInMinutes(now()) >= 3 && $export->processed_marketing === 0) {
+                $export->update([
+                    'status' => 'failed',
+                    'error_message' => 'Antrean export tidak berjalan di server (Queue worker tidak aktif). Silakan jalankan queue worker atau ubah QUEUE_CONNECTION=sync di .env.',
+                ]);
+            } else {
+                self::ensureQueueWorkerRunning();
+            }
         }
 
         return response()->json([
@@ -454,15 +462,31 @@ class ManagerController extends Controller
 
     public static function ensureQueueWorkerRunning(): void
     {
+        if (config('queue.default') === 'sync') {
+            return;
+        }
+
         $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
         $artisanPath = base_path('artisan');
-        $phpBinary = PHP_BINARY;
 
         try {
             if ($isWindows) {
+                $phpBinary = PHP_BINARY;
                 $cmd = "start /B \"\" \"{$phpBinary}\" \"{$artisanPath}\" queue:work --stop-when-empty > NUL 2>&1";
                 @pclose(@popen($cmd, 'r'));
             } else {
+                // Di Linux, jika PHP berjalan di bawah FPM (Nginx/Apache), PHP_BINARY merujuk ke php-fpm bukan php-cli
+                $phpBinary = PHP_BINARY;
+                if (str_contains($phpBinary, 'fpm') || ! is_executable($phpBinary)) {
+                    if (file_exists('/usr/bin/php') && is_executable('/usr/bin/php')) {
+                        $phpBinary = '/usr/bin/php';
+                    } elseif (file_exists('/usr/local/bin/php') && is_executable('/usr/local/bin/php')) {
+                        $phpBinary = '/usr/local/bin/php';
+                    } else {
+                        $phpBinary = 'php';
+                    }
+                }
+
                 $cmd = "\"{$phpBinary}\" \"{$artisanPath}\" queue:work --stop-when-empty > /dev/null 2>&1 &";
                 @exec($cmd);
             }
@@ -601,6 +625,12 @@ class ManagerController extends Controller
             'task' => ['nullable', 'integer', 'min:1', 'max:7'],
             'prospect_progress_note' => ['nullable', 'string'],
             'prospect_updates' => ['nullable', 'array'],
+            'pdfs' => ['nullable', 'array'],
+            'pdfs.*' => ['nullable'],
+            'pdfs.*.*' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+        ], [
+            'pdfs.*.*.mimes' => 'Format file bukti harus berupa PDF atau Gambar (JPG, JPEG, PNG, WEBP).',
+            'pdfs.*.*.max' => 'Ukuran file bukti maksimal 10MB.',
         ]);
 
         $date = Carbon::parse($data['date']);

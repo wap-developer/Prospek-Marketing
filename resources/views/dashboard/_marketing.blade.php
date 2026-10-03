@@ -76,125 +76,255 @@
         font-weight: 700;
     }
 
-    /* ====== To Do redesigned ====== */
-    .todo-card {
+    /* ====== To Do Card Compact Redesign ====== */
+    .todo-compact-card {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 20px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 8px;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: var(--shadow-card);
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .todo-head {
+    .todo-compact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+        border-color: var(--primary-300);
+    }
+    .todo-compact-card.ok { border-left: 4px solid #10B981; }
+    .todo-compact-card.partial { border-left: 4px solid #F59E0B; }
+    .todo-compact-card.empty { border-left: 4px solid #3B82F6; }
+
+    .todo-compact-head {
         display: flex;
         align-items: center;
-        gap: 12px;
+        justify-content: space-between;
+        gap: 10px;
     }
-    .todo-head .todo-ic {
-        width: 44px; height: 44px;
-        border-radius: 12px;
+    .todo-head-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+    .todo-mini-ic {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
     }
-    .todo-head .todo-ic.ok { background: #ECFDF5; color: #047857; }
-    .todo-head .todo-ic.empty { background: #FEE2E2; color: #B91C1C; }
-    .todo-head .todo-ic.partial { background: #FEF3C7; color: #B45309; }
-    .todo-head .todo-meta { flex: 1; min-width: 0; }
-    .todo-head .todo-meta .lbl {
+    .todo-mini-ic.ok { background: #ECFDF5; color: #047857; }
+    .todo-mini-ic.partial { background: #FEF3C7; color: #B45309; }
+    .todo-mini-ic.empty { background: #EFF6FF; color: #2563EB; }
+
+    .todo-title-box {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+    .todo-compact-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+    .todo-compact-date {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .todo-badge-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+    .todo-compact-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        text-transform: capitalize;
+        line-height: 1.2;
+    }
+    .todo-compact-badge .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+    .todo-compact-badge.ok { background: #ECFDF5; color: #047857; }
+    .todo-compact-badge.ok .dot { background: #10B981; }
+    .todo-compact-badge.partial { background: #FEF3C7; color: #B45309; }
+    .todo-compact-badge.partial .dot { background: #F59E0B; }
+    .todo-compact-badge.empty { background: #FEE2E2; color: #B91C1C; }
+    .todo-compact-badge.empty .dot { background: #EF4444; }
+
+    .todo-arrow-ic {
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        transition: transform .15s ease, color .15s ease;
+    }
+    .todo-compact-card:hover .todo-arrow-ic {
+        color: var(--primary-600);
+        transform: translateX(2px);
+    }
+
+    .todo-progress-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .todo-bar-bg {
+        flex: 1;
+        height: 6px;
+        background: #F1F5F9;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .todo-bar-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width .5s ease;
+    }
+    .todo-bar-fill.ok { background: linear-gradient(90deg, #10B981, #059669); }
+    .todo-bar-fill.partial { background: linear-gradient(90deg, #F59E0B, #D97706); }
+    .todo-bar-fill.empty { background: #CBD5E1; }
+    .todo-bar-pct {
         font-size: 11.5px;
         font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .06em;
         color: var(--text-secondary);
+        flex-shrink: 0;
+        min-width: 32px;
+        text-align: right;
     }
-    .todo-head .todo-meta .ttl {
-        font-size: 15px;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-top: 2px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .todo-head .todo-meta .ttl .pill {
-        font-size: 10.5px;
-        font-weight: 800;
-        padding: 3px 8px;
-        border-radius: 6px;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-    }
-    .todo-head .todo-meta .ttl .pill.ok { background: #ECFDF5; color: #047857; }
-    .todo-head .todo-meta .ttl .pill.empty { background: #FEE2E2; color: #B91C1C; }
-    .todo-head .todo-meta .ttl .pill.partial { background: #FEF3C7; color: #B45309; }
 
-    .todo-progress {
-        background: #F1F5F9;
-        border-radius: 8px;
-        height: 8px;
-        overflow: hidden;
-        position: relative;
-    }
-    .todo-progress .bar {
-        height: 100%;
-        background: linear-gradient(90deg, #3B82F6, #2563EB);
-        border-radius: 8px;
-        transition: width .6s cubic-bezier(.22,1,.36,1);
-    }
-    .todo-progress .bar.ok { background: linear-gradient(90deg, #10B981, #059669); }
-    .todo-progress .bar.partial { background: linear-gradient(90deg, #F59E0B, #D97706); }
-
-    .todo-stats {
+    .todo-compact-chips {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-    .todo-stat {
-        background: #FAFBFC;
+        grid-template-columns: repeat(3, 1fr);
+        background: #F8FAFC;
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 10px 12px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .todo-stat .si {
-        width: 30px; height: 30px;
         border-radius: 8px;
-        background: var(--primary-50);
-        color: var(--primary-600);
-        display: inline-flex;
+        padding: 5px 0;
+    }
+    .todo-chip {
+        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
+        padding: 2px 4px;
+        text-align: center;
     }
-    .todo-stat .si.pdf {
-        background: #FEF3C7;
-        color: #B45309;
+    .todo-chip:not(:last-child) {
+        border-right: 1px solid var(--border);
     }
-    .todo-stat .v {
-        font-size: 18px;
+    .todo-chip .val {
         font-weight: 800;
         color: var(--text-primary);
-        line-height: 1;
+        font-size: 13px;
+        line-height: 1.1;
     }
-    .todo-stat .k {
+    .todo-chip .denom {
         font-size: 10.5px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .04em;
+        font-weight: 600;
         color: var(--text-muted);
+    }
+    .todo-chip .lbl {
+        color: var(--text-secondary);
+        font-size: 10px;
+        font-weight: 600;
         margin-top: 2px;
+        white-space: nowrap;
     }
 
-    .todo-cta {
-        display: flex;
-        gap: 8px;
-        align-items: center;
+    .todo-btn-desktop {
+        display: none;
     }
-    .todo-cta .btn { padding: 9px 14px; font-size: 13px; }
 
-    @media (max-width: 720px) {
-        .todo-stats { grid-template-columns: 1fr 1fr; }
+    /* 4-Column KPI Grid for Prospect Cards */
+    .kpi-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    @media (min-width: 900px) {
+        .todo-compact-card {
+            padding: 14px 20px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+        }
+        .todo-compact-head {
+            flex: 1;
+            min-width: 0;
+            justify-content: flex-start;
+        }
+        .todo-progress-row {
+            width: 170px;
+            flex-shrink: 0;
+        }
+        .todo-compact-chips {
+            width: 300px;
+            flex-shrink: 0;
+            padding: 6px 0;
+        }
+        .todo-arrow-ic {
+            display: none;
+        }
+        .todo-btn-desktop {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            background: var(--primary-500);
+            color: #fff;
+            box-shadow: 0 2px 5px rgba(37,99,235,0.2);
+            flex-shrink: 0;
+            transition: background .15s ease;
+        }
+        .todo-btn-desktop.ok {
+            background: #059669;
+            box-shadow: 0 2px 5px rgba(5,150,105,0.2);
+        }
+        .todo-compact-card:hover .todo-btn-desktop {
+            background: var(--primary-600);
+        }
+        .todo-compact-card:hover .todo-btn-desktop.ok {
+            background: #047857;
+        }
+    }
+
+    @media (max-width: 1080px) {
+        .kpi-grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 640px) {
+        .kpi-grid-4 {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
     }
 </style>
 
@@ -237,32 +367,99 @@
 </section>
 
 @php
-    $linksCount = $todayTodo?->links?->count() ?? 0;
-    $pdfsCount  = $todayTodo?->pdfs?->count() ?? 0;
-    $pdfTaskKeys = [2,3,4,5,6];
-    $pdfTasksFilled = $todayTodo ? $todayTodo->pdfs->groupBy('task')->keys()->intersect($pdfTaskKeys)->count() : 0;
-    $targetLinks = 12;
-    $targetTasks = 6; // 1 link task + 5 PDF tasks
-    $linkTaskDone = $linksCount >= $targetLinks ? 1 : 0;
-    $tasksDone = $linkTaskDone + $pdfTasksFilled;
-    $pct = $todayTodo ? min(100, round(($tasksDone / $targetTasks) * 100)) : 0;
-    $allDone = $tasksDone === $targetTasks;
-    if ($todayTodo && $allDone) {
-        $todoState = 'ok';
-        $stateLabel = 'Lengkap';
-    } elseif ($todayTodo && $tasksDone > 0) {
-        $todoState = 'partial';
-        $stateLabel = 'Sebagian';
-    } elseif ($todayTodo) {
-        $todoState = 'partial';
-        $stateLabel = 'Mulai';
+    $stats = $todayTodoStats ?? null;
+    if ($stats) {
+        $linksCount = $stats['links_count'];
+        $targetLinks = $stats['target_links'];
+        $pdfTasksFilled = $stats['pdf_tasks_filled'];
+        $targetPdfTasks = $stats['target_pdf_tasks'];
+        $tasksDone = $stats['tasks_done'];
+        $targetTasks = $stats['total_tasks'];
+        $pct = $stats['pct'];
+        $todoState = $stats['state'];
+        $stateLabel = $stats['state_label'];
     } else {
-        $todoState = 'empty';
-        $stateLabel = 'Belum Input';
+        $linksCount = $todayTodo?->links?->count() ?? 0;
+        $targetLinks = 12;
+        $linkTaskDone = $linksCount >= $targetLinks ? 1 : 0;
+        $pdfTaskKeys = [2,3,4,5,6];
+        $pdfTasksFilled = $todayTodo ? $todayTodo->pdfs->groupBy('task')->keys()->intersect($pdfTaskKeys)->count() : 0;
+        $targetPdfTasks = 5;
+        $task7Done = !empty(trim((string)($todayTodo?->prospect_progress_note ?? ''))) ? 1 : 0;
+        $tasksDone = $linkTaskDone + $pdfTasksFilled + $task7Done;
+        $targetTasks = 7;
+        $pct = min(100, round(($tasksDone / $targetTasks) * 100));
+        $allDone = $tasksDone >= $targetTasks;
+        $todoState = $allDone ? 'ok' : ($tasksDone > 0 ? 'partial' : 'empty');
+        $stateLabel = $allDone ? 'Lengkap' : ($tasksDone > 0 ? 'Sebagian' : 'Belum Input');
     }
 @endphp
 
-<section class="kpi-grid">
+{{-- To Do Hari Ini Compact Card --}}
+<a href="{{ route('todos.daily') }}" class="card card-hover todo-compact-card {{ $todoState }}">
+    <div class="todo-compact-head">
+        <div class="todo-head-main">
+            <span class="todo-mini-ic {{ $todoState }}">
+                @if($todoState === 'ok')
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                @elseif($todoState === 'partial')
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                @else
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                @endif
+            </span>
+            <div class="todo-title-box">
+                <span class="todo-compact-title">To Do Hari Ini</span>
+                <span class="todo-compact-date">{{ now()->translatedFormat('d M Y') }}</span>
+            </div>
+        </div>
+        <div class="todo-badge-wrap">
+            <span class="todo-compact-badge {{ $todoState }}">
+                <span class="dot"></span>
+                <span>{{ $stateLabel }}</span>
+            </span>
+            <span class="todo-arrow-ic" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+        </div>
+    </div>
+
+    <div class="todo-progress-row">
+        <div class="todo-bar-bg">
+            <div class="todo-bar-fill {{ $todoState }}" style="width: {{ $pct }}%;"></div>
+        </div>
+        <span class="todo-bar-pct">{{ $pct }}%</span>
+    </div>
+
+    <div class="todo-compact-chips">
+        <div class="todo-chip">
+            <span class="val">{{ $tasksDone }}<span class="denom">/{{ $targetTasks }}</span></span>
+            <span class="lbl">Tugas Selesai</span>
+        </div>
+        <div class="todo-chip">
+            <span class="val">{{ $linksCount }}<span class="denom">/{{ $targetLinks }}</span></span>
+            <span class="lbl">Link Medsos</span>
+        </div>
+        <div class="todo-chip">
+            <span class="val">{{ $pdfTasksFilled }}<span class="denom">/{{ $targetPdfTasks }}</span></span>
+            <span class="lbl">Upload PDF</span>
+        </div>
+    </div>
+
+    <span class="todo-btn-desktop {{ $todoState }}">
+        @if($todoState === 'empty')
+            Input Sekarang
+        @elseif($todoState === 'ok')
+            Lihat Detail
+        @else
+            Lanjutkan
+        @endif
+        <span class="arrow">→</span>
+    </span>
+</a>
+
+{{-- 4 Kartu KPI Prospek --}}
+<section class="kpi-grid-4">
     {{-- Prospek Hari Ini --}}
     <a href="{{ route('prospects.index') }}" class="card card-hover kpi-card" style="text-decoration:none; color:inherit; display:block;">
         <span class="kpi-deco" style="background: radial-gradient(circle, var(--primary-200), transparent 70%);"></span>
@@ -297,71 +494,6 @@
         </div>
     </a>
 
-    {{-- To Do Hari Ini — REDESIGNED --}}
-    <a href="{{ route('todos.daily') }}" class="card card-hover kpi-card todo-card" style="text-decoration:none; color:inherit; display:flex;">
-        <span class="kpi-deco" style="background: radial-gradient(circle, #FDE68A, transparent 70%);"></span>
-        <div class="todo-head">
-            <div class="todo-ic {{ $todoState }}">
-                @if($todoState === 'ok')
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                @elseif($todoState === 'partial')
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                @else
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                @endif
-            </div>
-            <div class="todo-meta">
-                <div class="lbl">To Do Hari Ini</div>
-                <div class="ttl">
-                    {{ $todoState === 'empty' ? 'Belum ada input' : ($todoState === 'ok' ? 'Siap dijalankan' : 'Sedang berjalan') }}
-                    <span class="pill {{ $todoState }}">{{ $stateLabel }}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="todo-progress">
-            <div class="bar {{ $todoState }}" style="width: {{ $pct }}%;"></div>
-        </div>
-
-        <div class="todo-stats">
-            <div class="todo-stat">
-                <span class="si">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                </span>
-                <div>
-                    <div class="v">{{ $tasksDone }}</div>
-                    <div class="k">/ {{ $targetTasks }} Tugas</div>
-                </div>
-            </div>
-            <div class="todo-stat">
-                <span class="si pdf">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                </span>
-                <div>
-                    <div class="v">{{ $linksCount }}</div>
-                    <div class="k">/ {{ $targetLinks }} Link</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="todo-cta">
-            <span class="btn btn-primary" style="pointer-events:none; background: var(--primary-500); color:#fff;">
-                @if($todoState === 'empty')
-                    Input Sekarang
-                @elseif($todoState === 'ok')
-                    Lihat Detail
-                @else
-                    Lanjutkan
-                @endif
-                <span class="arrow">→</span>
-            </span>
-            <span style="font-size:12px; color:var(--text-muted);">{{ now()->format('d M Y') }}</span>
-        </div>
-    </a>
-</section>
-
-{{-- Status breakdown cards --}}
-<section class="kpi-grid" style="margin-top: 16px;">
     {{-- Prospek Open --}}
     <a href="{{ route('prospects.index') }}" class="card card-hover kpi-card" style="text-decoration:none; color:inherit; display:block;">
         <span class="kpi-deco" style="background: radial-gradient(circle, var(--primary-200), transparent 70%);"></span>
@@ -393,23 +525,6 @@
         <div class="kpi-meta">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             Deal berhasil
-        </div>
-    </a>
-
-    {{-- Prospek Cancel --}}
-    <a href="{{ route('prospects.index') }}" class="card card-hover kpi-card" style="text-decoration:none; color:inherit; display:block;">
-        <span class="kpi-deco" style="background: radial-gradient(circle, #FCA5A5, transparent 70%);"></span>
-        <div class="kpi-head">
-            <div class="kpi-icon" style="background: #FEE2E2; color: #B91C1C;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            </div>
-            <span class="kpi-spark down">Batal</span>
-        </div>
-        <div class="kpi-label">Total Prospek Cancel</div>
-        <div class="kpi-value" style="color: #B91C1C;">{{ $prospekCancel ?? 0 }}</div>
-        <div class="kpi-meta">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            Prospek dibatalkan
         </div>
     </a>
 </section>
