@@ -28,154 +28,216 @@ class ExportTodosJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 600; // 10 minutes max
-    public int $tries = 1;
+    public int $timeout = 900; // 15 minutes max
+    public int $tries = 3;
 
-    public function __construct(public TodoExport $export)
-    {
+    public function __construct(
+        public TodoExport $export,
+        public string $exportType = 'monthly',
+        public ?string $startDateStr = null,
+        public ?string $endDateStr = null,
+        public ?string $periodLabel = null
+    ) {
     }
 
     public function handle(): void
     {
-        Carbon::setLocale('id');
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(0);
 
-        $this->export->update([
-            'status' => 'processing',
-            'processed_marketing' => 0,
-        ]);
+        try {
+            Carbon::setLocale('id');
 
-        $month = $this->export->month;
-        $year = $this->export->year;
+            $this->export->update([
+                'status' => 'processing',
+                'processed_marketing' => 0,
+            ]);
 
-        $currentDate = Carbon::createFromDate($year, $month, 1);
-        $monthStart = $currentDate->copy()->startOfMonth();
-        $monthEnd = $currentDate->copy()->endOfMonth();
-        $daysInMonth = $currentDate->daysInMonth;
-        $monthLabel = $currentDate->translatedFormat('F Y');
+            $exportType = $this->exportType ?: ($this->export->export_type ?: 'monthly');
 
-        $queryStart = $monthStart->copy()->startOfWeek(Carbon::MONDAY);
-        $queryEnd = $monthEnd->copy()->endOfWeek(Carbon::SUNDAY);
+            if (!empty($this->startDateStr) && !empty($this->endDateStr)) {
+                $startDate = Carbon::parse($this->startDateStr)->startOfDay();
+                $endDate = Carbon::parse($this->endDateStr)->startOfDay();
+            } elseif (!empty($this->export->start_date) && !empty($this->export->end_date)) {
+                $startDate = Carbon::parse($this->export->start_date)->startOfDay();
+                $endDate = Carbon::parse($this->export->end_date)->startOfDay();
+            } else {
+                $month = $this->export->month ?: (int) now()->month;
+                $year = $this->export->year ?: (int) now()->year;
+                $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+                $endDate = $startDate->copy()->endOfMonth();
+            }
 
-        $tasksList = [
-            1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Other Video)'],
-            2 => ['title' => 'Broadcast & Komentar Sosial Media', 'desc' => 'Bukti PDF broadcast & komentar'],
-            3 => ['title' => 'Mengiklankan Akun Instagram', 'desc' => 'Bukti PDF iklan Instagram'],
-            4 => ['title' => 'DM Brosur', 'desc' => 'Bukti PDF DM brosur (Pak Sabar, Pak Henry, Marketing)'],
-            5 => ['title' => 'Menyapa & Follow Up Klien Lama', 'desc' => 'Bukti PDF sapa/follow up klien lama'],
-            6 => ['title' => 'Memaparkan Rencana Penjualan', 'desc' => 'Bukti PDF rencana penjualan'],
-            7 => ['title' => 'Update Perkembangan Prospek', 'desc' => 'Update perkembangan prospek yang dikirim pada tanggal tersebut'],
-        ];
+            if ($startDate->gt($endDate)) {
+                $temp = $startDate->copy();
+                $startDate = $endDate->copy();
+                $endDate = $temp;
+            }
 
-        $marketings = User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->orderBy('name')->get();
+            $periodLabel = $this->periodLabel ?: $this->export->period_label;
+            if (empty($periodLabel)) {
+                if ($exportType === 'monthly') {
+                    $periodLabel = $startDate->translatedFormat('F Y');
+                } elseif ($exportType === 'daily') {
+                    $periodLabel = $startDate->translatedFormat('d F Y');
+                } else {
+                    $periodLabel = $startDate->translatedFormat('d M Y') . ' - ' . $endDate->translatedFormat('d M Y');
+                }
+            }
 
-        if ($marketings->isEmpty()) {
+            $tasksList = [
+                1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Other Video)'],
+                2 => ['title' => 'Broadcast & Komentar Sosial Media', 'desc' => 'Bukti PDF broadcast & komentar'],
+                3 => ['title' => 'Mengiklankan Akun Instagram', 'desc' => 'Bukti PDF iklan Instagram'],
+                4 => ['title' => 'DM Brosur', 'desc' => 'Bukti PDF DM brosur (Pak Sabar, Pak Henry, Marketing)'],
+                5 => ['title' => 'Menyapa & Follow Up Klien Lama', 'desc' => 'Bukti PDF sapa/follow up klien lama'],
+                6 => ['title' => 'Memaparkan Rencana Penjualan', 'desc' => 'Bukti PDF rencana penjualan'],
+                7 => ['title' => 'Update Perkembangan Prospek', 'desc' => 'Update perkembangan prospek yang dikirim pada tanggal tersebut'],
+            ];
+
+            $marketings = User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->orderBy('name')->get();
+
+            if ($marketings->isEmpty()) {
+                $this->export->update([
+                    'status' => 'failed',
+                    'error_message' => 'Tidak ada karyawan dengan role Marketing yang ditemukan.',
+                ]);
+                return;
+            }
+
+            $this->export->update(['total_marketing' => $marketings->count()]);
+
+            // Query bulk data sekali untuk semua marketing
+            $allTodos = Todo::with(['links', 'pdfs'])
+                ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+                ->whereHas('user.role', fn ($q) => $q->where('slug', 'marketing'))
+                ->get();
+
+            $targetProspects = Prospect::with(['service', 'sender'])
+                ->whereBetween('entry_date', [
+                    $startDate->copy()->startOfDay(),
+                    $endDate->copy()->endOfDay()
+                ])
+                ->get();
+
+            $targetProspectsByUser = $targetProspects->groupBy('marketing_user_id');
+            $allTargetProspectIds = $targetProspects->pluck('id');
+
+            $allWeeklyUpdates = ProspectWeeklyUpdate::with(['prospect.service', 'prospect.sender'])
+                ->whereIn('prospect_id', $allTargetProspectIds)
+                ->whereNotNull('note')
+                ->where('note', '!=', '')
+                ->get();
+
+            // Siapkan direktori penyimpanan export
+            $exportDir = storage_path('app/exports');
+            if (!File::isDirectory($exportDir)) {
+                File::makeDirectory($exportDir, 0755, true);
+            }
+
+            if ($exportType === 'monthly') {
+                $cleanPeriodTag = str_replace(' ', '_', $startDate->translatedFormat('F Y'));
+                $zipDownloadName = 'Rekap_Todos_Marketing_' . $cleanPeriodTag . '_' . date('Ymd_His') . '.zip';
+                $filePeriodTag = $cleanPeriodTag;
+            } elseif ($exportType === 'daily') {
+                $cleanPeriodTag = $startDate->format('Ymd');
+                $zipDownloadName = 'Rekap_Todos_Marketing_Harian_' . $cleanPeriodTag . '_' . date('Ymd_His') . '.zip';
+                $filePeriodTag = 'Harian_' . $cleanPeriodTag;
+            } else {
+                $cleanPeriodTag = $startDate->format('Ymd') . '_sd_' . $endDate->format('Ymd');
+                $zipDownloadName = 'Rekap_Todos_Marketing_' . $cleanPeriodTag . '_' . date('Ymd_His') . '.zip';
+                $filePeriodTag = $cleanPeriodTag;
+            }
+
+            $finalZipPath = $exportDir . DIRECTORY_SEPARATOR . $zipDownloadName;
+
+            $zip = new ZipArchive();
+            if ($zip->open($finalZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                $this->export->update([
+                    'status' => 'failed',
+                    'error_message' => 'Gagal membuat file ZIP di storage server.',
+                ]);
+                return;
+            }
+
+            $createdTempFiles = [];
+            $usedFileNames = [];
+
+            foreach ($marketings as $idx => $m) {
+                $userTodos = $allTodos->where('user_id', $m->id);
+
+                $spreadsheet = $this->buildFastMarketingSpreadsheet(
+                    $m,
+                    $startDate,
+                    $endDate,
+                    $periodLabel,
+                    $userTodos,
+                    $targetProspectsByUser,
+                    $allWeeklyUpdates,
+                    $tasksList,
+                    $exportType
+                );
+
+                $tempXlsx = tempnam(sys_get_temp_dir(), 'mkt_xlsx_');
+                $writer = new Xlsx($spreadsheet);
+                $writer->save($tempXlsx);
+                $createdTempFiles[] = $tempXlsx;
+
+                $spreadsheet->disconnectWorksheets();
+                unset($spreadsheet);
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+
+                $cleanName = preg_replace('/[\\\\\/:\*\?"<>\|]/', '', trim((string) $m->name));
+                $cleanName = trim($cleanName) ?: ('Marketing_' . ($idx + 1));
+                $cleanName = str_replace(' ', '_', $cleanName);
+
+                $baseFileName = 'Rekap_Todos_' . $cleanName . '_' . $filePeriodTag;
+                $excelFileName = $baseFileName . '.xlsx';
+                $counter = 1;
+                while (in_array(strtolower($excelFileName), $usedFileNames, true)) {
+                    $excelFileName = $baseFileName . '_' . $counter . '.xlsx';
+                    $counter++;
+                }
+                $usedFileNames[] = strtolower($excelFileName);
+
+                $zip->addFile($tempXlsx, $excelFileName);
+
+                // Update progress ke database setiap marketing selesai diproses
+                $this->export->increment('processed_marketing');
+            }
+
+            $zip->close();
+
+            // Bersihkan temp files
+            foreach ($createdTempFiles as $tempFile) {
+                if (file_exists($tempFile)) {
+                    @unlink($tempFile);
+                }
+            }
+
+            $this->export->update([
+                'status' => 'completed',
+                'filename' => $zipDownloadName,
+                'file_path' => $finalZipPath,
+                'completed_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ExportTodosJob handle error: ' . $e->getMessage(), [
+                'export_id' => $this->export->id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             $this->export->update([
                 'status' => 'failed',
-                'error_message' => 'Tidak ada karyawan dengan role Marketing yang ditemukan.',
+                'error_message' => $e->getMessage(),
             ]);
-            return;
+
+            throw $e;
         }
-
-        $this->export->update(['total_marketing' => $marketings->count()]);
-
-        // Query bulk data sekali untuk semua marketing
-        $allTodos = Todo::with(['links', 'pdfs'])
-            ->whereBetween('date', [$queryStart, $queryEnd])
-            ->whereHas('user.role', fn ($q) => $q->where('slug', 'marketing'))
-            ->get();
-
-        $targetProspects = Prospect::with(['service', 'sender'])
-            ->whereMonth('entry_date', $month)
-            ->whereYear('entry_date', $year)
-            ->get();
-
-        $targetProspectsByUser = $targetProspects->groupBy('marketing_user_id');
-        $allTargetProspectIds = $targetProspects->pluck('id');
-
-        $allWeeklyUpdates = ProspectWeeklyUpdate::with(['prospect.service', 'prospect.sender'])
-            ->whereIn('prospect_id', $allTargetProspectIds)
-            ->whereNotNull('note')
-            ->where('note', '!=', '')
-            ->get();
-
-        // Siapkan direktori penyimpanan export
-        $exportDir = storage_path('app/exports');
-        if (!File::isDirectory($exportDir)) {
-            File::makeDirectory($exportDir, 0755, true);
-        }
-
-        $cleanMonthLabel = str_replace(' ', '_', $monthLabel);
-        $zipDownloadName = 'Rekap_Todos_Marketing_' . $cleanMonthLabel . '_' . date('Ymd_His') . '.zip';
-        $finalZipPath = $exportDir . DIRECTORY_SEPARATOR . $zipDownloadName;
-
-        $zip = new ZipArchive();
-        if ($zip->open($finalZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            $this->export->update([
-                'status' => 'failed',
-                'error_message' => 'Gagal membuat file ZIP di storage server.',
-            ]);
-            return;
-        }
-
-        $createdTempFiles = [];
-        $usedFileNames = [];
-
-        foreach ($marketings as $idx => $m) {
-            $userTodos = $allTodos->where('user_id', $m->id);
-
-            $spreadsheet = $this->buildFastMarketingSpreadsheet(
-                $m,
-                $monthStart,
-                $daysInMonth,
-                $monthLabel,
-                $userTodos,
-                $targetProspectsByUser,
-                $allWeeklyUpdates,
-                $tasksList
-            );
-
-            $tempXlsx = tempnam(sys_get_temp_dir(), 'mkt_xlsx_');
-            $writer = new Xlsx($spreadsheet);
-            $writer->save($tempXlsx);
-            $createdTempFiles[] = $tempXlsx;
-
-            $spreadsheet->disconnectWorksheets();
-            unset($spreadsheet);
-
-            $cleanName = preg_replace('/[\\\\\/:\*\?"<>\|]/', '', trim((string) $m->name));
-            $cleanName = trim($cleanName) ?: ('Marketing_' . ($idx + 1));
-            $cleanName = str_replace(' ', '_', $cleanName);
-
-            $baseFileName = 'Rekap_Todos_' . $cleanName . '_' . $cleanMonthLabel;
-            $excelFileName = $baseFileName . '.xlsx';
-            $counter = 1;
-            while (in_array(strtolower($excelFileName), $usedFileNames, true)) {
-                $excelFileName = $baseFileName . '_' . $counter . '.xlsx';
-                $counter++;
-            }
-            $usedFileNames[] = strtolower($excelFileName);
-
-            $zip->addFile($tempXlsx, $excelFileName);
-
-            // Update progress ke database setiap marketing selesai diproses
-            $this->export->increment('processed_marketing');
-        }
-
-        $zip->close();
-
-        // Bersihkan temp files
-        foreach ($createdTempFiles as $tempFile) {
-            if (file_exists($tempFile)) {
-                @unlink($tempFile);
-            }
-        }
-
-        $this->export->update([
-            'status' => 'completed',
-            'filename' => $zipDownloadName,
-            'file_path' => $finalZipPath,
-            'completed_at' => now(),
-        ]);
     }
 
     public function failed(?Throwable $exception): void
@@ -185,9 +247,17 @@ class ExportTodosJob implements ShouldQueue
             'exception' => $exception,
         ]);
 
+        $fresh = $this->export->fresh();
+        $message = $fresh?->error_message;
+
+        if (empty($message) || str_contains($message, 'has been attempted too many times')) {
+            $prev = $exception?->getPrevious()?->getMessage();
+            $message = $prev ?: ($exception?->getMessage() ?: 'Proses export gagal dijalankan di server (Queue worker timeout/memori limit).');
+        }
+
         $this->export->update([
             'status' => 'failed',
-            'error_message' => $exception?->getMessage() ?? 'Terjadi kesalahan sistem saat proses export.',
+            'error_message' => $message,
         ]);
     }
 
@@ -196,14 +266,28 @@ class ExportTodosJob implements ShouldQueue
      */
     public function buildFastMarketingSpreadsheet(
         User $m,
-        Carbon $monthStart,
-        int $daysInMonth,
-        string $monthLabel,
+        Carbon $startDate,
+        Carbon|int $endDateOrDays,
+        string $periodLabel,
         $userTodos,
         $targetProspectsByUser,
         $allWeeklyUpdates,
-        array $tasksList
+        array $tasksList,
+        string $exportType = 'monthly'
     ): Spreadsheet {
+        if ($endDateOrDays instanceof Carbon) {
+            $endDate = $endDateOrDays;
+            $daysCount = (int) $startDate->diffInDays($endDate) + 1;
+        } else {
+            $daysCount = (int) $endDateOrDays;
+            $endDate = $startDate->copy()->addDays(max(0, $daysCount - 1));
+        }
+
+        $dayDates = [];
+        for ($i = 0; $i < $daysCount; $i++) {
+            $dayDates[] = $startDate->copy()->addDays($i);
+        }
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -213,11 +297,15 @@ class ExportTodosJob implements ShouldQueue
         $sheet->setTitle(mb_substr($cleanTitle, 0, 31));
         $sheet->setShowGridLines(true);
 
-        $userTodosByDate = $userTodos->keyBy(fn ($t) => $t->date->format('Y-m-d'));
+        $userTodosByDate = $userTodos->keyBy(fn ($t) => is_string($t->date) ? substr($t->date, 0, 10) : $t->date->format('Y-m-d'));
 
         // Prospek marketing ini di kelompokkan berdasarkan tanggal kirim (entry_date)
         $userProspects = $targetProspectsByUser->get($m->id, collect());
-        $userProspectsByDate = $userProspects->groupBy(fn ($p) => $p->entry_date ? $p->entry_date->format('Y-m-d') : '');
+        $userProspectsByDate = $userProspects->groupBy(function ($p) {
+            if (!$p->entry_date) return '';
+            if (is_string($p->entry_date)) return substr($p->entry_date, 0, 10);
+            return $p->entry_date instanceof \DateTimeInterface ? $p->entry_date->format('Y-m-d') : '';
+        });
 
         // Map id prospek yang sudah terupdate
         $userWeeklyUpdates = $allWeeklyUpdates->whereIn('prospect_id', $userProspects->pluck('id'));
@@ -236,8 +324,7 @@ class ExportTodosJob implements ShouldQueue
         // Hitung tugas harian
         $dailyTasks = [];
         $dailyTasksCount = [];
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dayDate = $monthStart->copy()->day($d);
+        foreach ($dayDates as $idx => $dayDate) {
             $dateStr = $dayDate->format('Y-m-d');
             $todo = $userTodosByDate->get($dateStr);
 
@@ -257,23 +344,23 @@ class ExportTodosJob implements ShouldQueue
                 6 => $pdfsByTask->has(6) && $pdfsByTask->get(6)->count() > 0,
                 7 => $hasTask7,
             ];
-            $dailyTasks[$d] = $tasksForDay;
-            $dailyTasksCount[$d] = count(array_filter($tasksForDay));
+            $dailyTasks[$idx] = $tasksForDay;
+            $dailyTasksCount[$idx] = count(array_filter($tasksForDay));
         }
 
         $totalFilledDays = count(array_filter($dailyTasksCount, fn ($c) => $c > 0));
-        $compliancePercent = $daysInMonth > 0 ? round(($totalFilledDays / $daysInMonth) * 100, 1) : 0;
+        $compliancePercent = $daysCount > 0 ? round(($totalFilledDays / $daysCount) * 100, 1) : 0;
 
-        $lastDayColStr = Coordinate::stringFromColumnIndex(3 + $daysInMonth);
-        $totalXColStr = Coordinate::stringFromColumnIndex(4 + $daysInMonth);
-        $pctColStr = Coordinate::stringFromColumnIndex(5 + $daysInMonth);
+        $lastDayColStr = Coordinate::stringFromColumnIndex(3 + $daysCount);
+        $totalXColStr = Coordinate::stringFromColumnIndex(4 + $daysCount);
+        $pctColStr = Coordinate::stringFromColumnIndex(5 + $daysCount);
 
         // --- HEADER INFORMASI ---
         $sheet->setCellValue('A1', 'REKAP TO-DO HARIAN MARKETING');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(15)->getColor()->setARGB('FF1E293B');
         $sheet->getRowDimension(1)->setRowHeight(24);
 
-        $sheet->setCellValue('A2', 'Periode: ' . $monthLabel);
+        $sheet->setCellValue('A2', 'Periode: ' . $periodLabel);
         $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(10)->getColor()->setARGB('FF64748B');
         $sheet->getRowDimension(2)->setRowHeight(18);
         $sheet->getRowDimension(3)->setRowHeight(8);
@@ -289,10 +376,10 @@ class ExportTodosJob implements ShouldQueue
         $sheet->setCellValue('C5', $m->email ?? '-');
         $sheet->getRowDimension(5)->setRowHeight(20);
 
-        $sheet->setCellValue('B6', 'Kepatuhan Bulan Ini:');
+        $sheet->setCellValue('B6', 'Kepatuhan Periode Ini:');
         $sheet->getStyle('B6')->getFont()->setBold(true)->setSize(10)->getColor()->setARGB('FF475569');
         $complianceStatus = $compliancePercent >= 80 ? 'Sangat Baik' : ($compliancePercent >= 50 ? 'Cukup' : 'Perlu Ditingkatkan');
-        $sheet->setCellValue('C6', "{$totalFilledDays} dari {$daysInMonth} Hari Aktif ({$compliancePercent}%) — {$complianceStatus}");
+        $sheet->setCellValue('C6', "{$totalFilledDays} dari {$daysCount} Hari Aktif ({$compliancePercent}%) — {$complianceStatus}");
         $sheet->getStyle('C6')->getFont()->setBold(true)->setSize(10)->getColor()->setARGB($compliancePercent >= 80 ? 'FF059669' : ($compliancePercent >= 50 ? 'FFD97706' : 'FFE11D48'));
         $sheet->getRowDimension(6)->setRowHeight(20);
         $sheet->getRowDimension(7)->setRowHeight(12);
@@ -306,10 +393,20 @@ class ExportTodosJob implements ShouldQueue
         $sheet->setCellValue('A9', 'No');
         $sheet->setCellValue('B9', 'Uraian Tugas');
         $sheet->setCellValue('C9', 'Keterangan');
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $colLetter = Coordinate::stringFromColumnIndex(3 + $d);
-            $sheet->setCellValue("{$colLetter}9", $d);
-            $sheet->getColumnDimension($colLetter)->setWidth(5.2);
+        foreach ($dayDates as $idx => $dayDate) {
+            $colLetter = Coordinate::stringFromColumnIndex(4 + $idx);
+            if ($exportType === 'monthly') {
+                $colHeader = $dayDate->format('j');
+                $colWidth = 5.2;
+            } elseif ($exportType === 'daily') {
+                $colHeader = $dayDate->translatedFormat('d M Y');
+                $colWidth = 14;
+            } else {
+                $colHeader = $dayDate->translatedFormat('d/m');
+                $colWidth = 7;
+            }
+            $sheet->setCellValue("{$colLetter}9", $colHeader);
+            $sheet->getColumnDimension($colLetter)->setWidth($colWidth);
         }
         $sheet->setCellValue("{$totalXColStr}9", 'Total (X)');
         $sheet->setCellValue("{$pctColStr}9", '% Capaian');
@@ -366,9 +463,9 @@ class ExportTodosJob implements ShouldQueue
             $sheet->setCellValue("C{$rowNum}", $tInfo['desc']);
 
             $countXForTask = 0;
-            for ($d = 1; $d <= $daysInMonth; $d++) {
-                $colLetter = Coordinate::stringFromColumnIndex(3 + $d);
-                $isDone = $dailyTasks[$d][$taskNo] ?? false;
+            foreach ($dayDates as $idx => $dayDate) {
+                $colLetter = Coordinate::stringFromColumnIndex(4 + $idx);
+                $isDone = $dailyTasks[$idx][$taskNo] ?? false;
 
                 if ($isDone) {
                     $countXForTask++;
@@ -379,7 +476,7 @@ class ExportTodosJob implements ShouldQueue
                 }
             }
 
-            $taskPct = $daysInMonth > 0 ? round(($countXForTask / $daysInMonth) * 100, 1) : 0;
+            $taskPct = $daysCount > 0 ? round(($countXForTask / $daysCount) * 100, 1) : 0;
             $sheet->setCellValue("{$totalXColStr}{$rowNum}", $countXForTask);
             $sheet->setCellValue("{$pctColStr}{$rowNum}", $taskPct . '%');
             $sheet->getStyle("{$pctColStr}{$rowNum}")->getFont()->getColor()->setARGB($taskPct >= 80 ? 'FF059669' : ($taskPct >= 50 ? 'FFD97706' : 'FFE11D48'));
@@ -414,9 +511,9 @@ class ExportTodosJob implements ShouldQueue
         ];
 
         $grandTotalX = 0;
-        for ($d = 1; $d <= $daysInMonth; $d++) {
-            $colLetter = Coordinate::stringFromColumnIndex(3 + $d);
-            $cnt = $dailyTasksCount[$d] ?? 0;
+        foreach ($dayDates as $idx => $dayDate) {
+            $colLetter = Coordinate::stringFromColumnIndex(4 + $idx);
+            $cnt = $dailyTasksCount[$idx] ?? 0;
             $grandTotalX += $cnt;
 
             $sheet->setCellValue("{$colLetter}{$rowTotal}", $cnt);
@@ -429,7 +526,7 @@ class ExportTodosJob implements ShouldQueue
             }
         }
 
-        $maxPossibleTasks = 7 * $daysInMonth;
+        $maxPossibleTasks = 7 * $daysCount;
         $grandPct = $maxPossibleTasks > 0 ? round(($grandTotalX / $maxPossibleTasks) * 100, 1) : 0;
 
         $sheet->setCellValue("{$totalXColStr}{$rowTotal}", $grandTotalX);
@@ -483,7 +580,12 @@ class ExportTodosJob implements ShouldQueue
                 $latestUpdate = $updatesByProspect->get($p->id)?->sortByDesc('updated_at')->first();
                 $noteText = trim((string) ($latestUpdate?->note ?? $p->note ?? ''));
 
-                $dateText = $p->entry_date ? $p->entry_date->translatedFormat('d M Y') : '-';
+                $dateText = '-';
+                if ($p->entry_date) {
+                    $dateText = $p->entry_date instanceof \DateTimeInterface
+                        ? $p->entry_date->translatedFormat('d M Y')
+                        : Carbon::parse($p->entry_date)->locale('id')->translatedFormat('d M Y');
+                }
                 $phoneText = $p->client_phone ?? '-';
                 $serviceText = $p->service?->name ?? '-';
 

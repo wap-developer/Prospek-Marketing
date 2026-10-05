@@ -594,14 +594,14 @@ class ProspectIndexModalTest extends TestCase
         $response->assertDontSee('Semua Bulan');
         $response->assertDontSee('Semua Tahun');
 
-        // Verifikasi status dropdown memuat OPEN dan CLOSE uppercase, dan TIDAK memuat Cancel
+        // Verifikasi status dropdown memuat OPEN dan CLOSING uppercase, dan TIDAK memuat Cancel
         $response->assertSee('>OPEN</option>', false);
-        $response->assertSee('>CLOSE</option>', false);
+        $response->assertSee('>CLOSING</option>', false);
         $response->assertDontSee('>CANCEL</option>', false);
         $response->assertDontSee('>Cancel</option>', false);
 
         // Verifikasi badge pada tabel
-        $response->assertSee('CLOSE');
+        $response->assertSee('CLOSING');
 
         // Test filtering by start_date dan end_date (keduanya harus diisi)
         $filterRes = $this->actingAs($user)->get(route('prospects.index', [

@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -154,18 +155,32 @@ class ManagerController extends Controller
 
         Carbon::setLocale('id');
 
-        $month = $request->integer('month', (int) now()->month);
-        $year = $request->integer('year', (int) now()->year);
+        $type = $request->string('type', 'monthly')->value();
 
-        $currentDate = Carbon::createFromDate($year, $month, 1);
-        $monthStart = $currentDate->copy()->startOfMonth();
-        $monthEnd = $currentDate->copy()->endOfMonth();
-        $daysInMonth = $currentDate->daysInMonth;
-        $monthLabel = $currentDate->translatedFormat('F Y');
-
-        // Ambil todos dari rentang Senin awal minggu sampai Minggu akhir minggu
-        $queryStart = $monthStart->copy()->startOfWeek(Carbon::MONDAY);
-        $queryEnd = $monthEnd->copy()->endOfWeek(Carbon::SUNDAY);
+        if ($type === 'range') {
+            $startDate = Carbon::parse($request->string('start_date', now()->startOfWeek(Carbon::MONDAY)->toDateString()))->startOfDay();
+            $endDate = Carbon::parse($request->string('end_date', now()->endOfWeek(Carbon::SUNDAY)->toDateString()))->startOfDay();
+            if ($startDate->gt($endDate)) {
+                $temp = $startDate->copy();
+                $startDate = $endDate->copy();
+                $endDate = $temp;
+            }
+            $periodLabel = $startDate->translatedFormat('d M Y') . ' - ' . $endDate->translatedFormat('d M Y');
+            $filePeriodTag = $startDate->format('Ymd') . '_sd_' . $endDate->format('Ymd');
+        } elseif ($type === 'daily') {
+            $startDate = Carbon::parse($request->string('single_date', $request->string('date', now()->toDateString())))->startOfDay();
+            $endDate = $startDate->copy();
+            $periodLabel = $startDate->translatedFormat('d F Y');
+            $filePeriodTag = 'Harian_' . $startDate->format('Ymd');
+        } else {
+            $type = 'monthly';
+            $month = $request->integer('month', (int) now()->month);
+            $year = $request->integer('year', (int) now()->year);
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = $startDate->copy()->endOfMonth();
+            $periodLabel = $startDate->translatedFormat('F Y');
+            $filePeriodTag = str_replace(' ', '_', $periodLabel);
+        }
 
         $tasksList = [
             1 => ['title' => 'Posting 12 Link Media Sosial', 'desc' => '12 link (Instagram, TikTok, FB, Other Video)'],
@@ -183,13 +198,15 @@ class ManagerController extends Controller
 
             $userTodos = Todo::with(['links', 'pdfs'])
                 ->where('user_id', $user->id)
-                ->whereBetween('date', [$queryStart, $queryEnd])
+                ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
                 ->get();
 
             $targetProspects = Prospect::with(['service', 'sender'])
                 ->where('marketing_user_id', $user->id)
-                ->whereMonth('entry_date', $month)
-                ->whereYear('entry_date', $year)
+                ->whereBetween('entry_date', [
+                    $startDate->copy()->startOfDay(),
+                    $endDate->copy()->endOfDay()
+                ])
                 ->get();
 
             $targetProspectsByUser = $targetProspects->groupBy('marketing_user_id');
@@ -201,18 +218,19 @@ class ManagerController extends Controller
 
             $spreadsheet = $this->buildMarketingSpreadsheet(
                 $user,
-                $monthStart,
-                $daysInMonth,
-                $monthLabel,
+                $startDate,
+                $endDate,
+                $periodLabel,
                 $userTodos,
                 $targetProspectsByUser,
                 $allWeeklyUpdates,
-                $tasksList
+                $tasksList,
+                $type
             );
 
             $cleanName = preg_replace('/[\\\\\/:\*\?"<>\|]/', '', trim((string) $user->name));
             $cleanName = trim($cleanName) ?: 'Marketing';
-            $filename = 'Rekap_Todos_' . str_replace(' ', '_', $cleanName) . '_' . str_replace(' ', '_', $monthLabel) . '.xlsx';
+            $filename = 'Rekap_Todos_' . str_replace(' ', '_', $cleanName) . '_' . $filePeriodTag . '.xlsx';
 
             return response()->streamDownload(function () use ($spreadsheet) {
                 $writer = new Xlsx($spreadsheet);
@@ -233,13 +251,15 @@ class ManagerController extends Controller
         }
 
         $allTodos = Todo::with(['links', 'pdfs'])
-            ->whereBetween('date', [$queryStart, $queryEnd])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->whereHas('user.role', fn ($q) => $q->where('slug', 'marketing'))
             ->get();
 
         $targetProspects = Prospect::with(['service', 'sender'])
-            ->whereMonth('entry_date', $month)
-            ->whereYear('entry_date', $year)
+            ->whereBetween('entry_date', [
+                $startDate->copy()->startOfDay(),
+                $endDate->copy()->endOfDay()
+            ])
             ->get();
 
         $targetProspectsByUser = $targetProspects->groupBy('marketing_user_id');
@@ -271,13 +291,14 @@ class ManagerController extends Controller
 
             $spreadsheet = $this->buildMarketingSpreadsheet(
                 $m,
-                $monthStart,
-                $daysInMonth,
-                $monthLabel,
+                $startDate,
+                $endDate,
+                $periodLabel,
                 $userTodos,
                 $targetProspectsByUser,
                 $allWeeklyUpdates,
-                $tasksList
+                $tasksList,
+                $type
             );
 
             // Simpan spreadsheet ke temporary file
@@ -298,7 +319,7 @@ class ManagerController extends Controller
             }
             $cleanName = str_replace(' ', '_', $cleanName);
 
-            $baseFileName = 'Rekap_Todos_' . $cleanName . '_' . str_replace(' ', '_', $monthLabel);
+            $baseFileName = 'Rekap_Todos_' . $cleanName . '_' . $filePeriodTag;
             $excelFileName = $baseFileName . '.xlsx';
             $counter = 1;
             while (in_array(strtolower($excelFileName), $usedFileNames, true)) {
@@ -319,7 +340,7 @@ class ManagerController extends Controller
             }
         }
 
-        $zipDownloadName = 'Rekap_Todos_Marketing_' . str_replace(' ', '_', $monthLabel) . '.zip';
+        $zipDownloadName = 'Rekap_Todos_Marketing_' . $filePeriodTag . '.zip';
 
         return response()->download($tempZipPath, $zipDownloadName, [
             'Content-Type' => 'application/zip',
@@ -332,8 +353,41 @@ class ManagerController extends Controller
     {
         $this->assertManager($request);
 
-        $month = $request->integer('month', (int) now()->month);
-        $year = $request->integer('year', (int) now()->year);
+        $type = $request->string('type', 'monthly')->value();
+
+        if ($type === 'range') {
+            if (!$request->filled('start_date') || !$request->filled('end_date')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Tanggal awal dan tanggal akhir wajib diisi untuk export mingguan / rentang tanggal.',
+                ], 422);
+            }
+            $startDate = Carbon::parse($request->string('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->string('end_date'))->startOfDay();
+            if ($startDate->gt($endDate)) {
+                $temp = $startDate->copy();
+                $startDate = $endDate->copy();
+                $endDate = $temp;
+            }
+            $periodLabel = $startDate->translatedFormat('d M Y') . ' - ' . $endDate->translatedFormat('d M Y');
+        } elseif ($type === 'daily') {
+            if (!$request->filled('single_date') && !$request->filled('date')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Tanggal wajib dipilih untuk export harian.',
+                ], 422);
+            }
+            $startDate = Carbon::parse($request->string('single_date', $request->string('date')))->startOfDay();
+            $endDate = $startDate->copy();
+            $periodLabel = $startDate->translatedFormat('d F Y');
+        } else {
+            $type = 'monthly';
+            $month = $request->integer('month', (int) now()->month);
+            $year = $request->integer('year', (int) now()->year);
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = $startDate->copy()->endOfMonth();
+            $periodLabel = $startDate->translatedFormat('F Y');
+        }
 
         $marketingsCount = User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->count();
         if ($marketingsCount === 0) {
@@ -343,13 +397,19 @@ class ManagerController extends Controller
             ], 422);
         }
 
-        // Cek jika sudah ada export yang sedang berjalan untuk bulan ini
-        $existing = TodoExport::where('user_id', $request->user()->id)
-            ->where('month', $month)
-            ->where('year', $year)
-            ->whereIn('status', ['pending', 'processing'])
-            ->latest()
-            ->first();
+        // Cek jika sudah ada export yang sedang berjalan
+        $existingQuery = TodoExport::where('user_id', $request->user()->id)
+            ->whereIn('status', ['pending', 'processing']);
+
+        if ($type === 'monthly') {
+            $existingQuery->where('month', $startDate->month)->where('year', $startDate->year);
+        } elseif ($type === 'daily') {
+            $existingQuery->whereDate('start_date', $startDate->toDateString());
+        } else {
+            $existingQuery->whereDate('start_date', $startDate->toDateString())->whereDate('end_date', $endDate->toDateString());
+        }
+
+        $existing = $existingQuery->latest()->first();
 
         if ($existing) {
             self::ensureQueueWorkerRunning();
@@ -366,24 +426,36 @@ class ManagerController extends Controller
 
         $export = TodoExport::create([
             'user_id' => $request->user()->id,
-            'month' => $month,
-            'year' => $year,
+            'month' => $startDate->month,
+            'year' => $startDate->year,
+            'export_type' => $type,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'period_label' => $periodLabel,
             'status' => 'pending',
             'total_marketing' => $marketingsCount,
             'processed_marketing' => 0,
         ]);
 
-        ExportTodosJob::dispatch($export);
+        ExportTodosJob::dispatch(
+            $export,
+            $type,
+            $startDate->toDateString(),
+            $endDate->toDateString(),
+            $periodLabel
+        );
         self::ensureQueueWorkerRunning();
+
+        $export->refresh();
 
         return response()->json([
             'status' => 'success',
             'export_id' => $export->id,
-            'percent' => 0,
-            'processed' => 0,
+            'percent' => $export->percent,
+            'processed' => $export->processed_marketing,
             'total' => $marketingsCount,
-            'export_status' => 'pending',
-            'message' => 'Export berhasil dijadwalkan di background.',
+            'export_status' => $export->status,
+            'message' => $export->status === 'completed' ? 'Export berhasil selesai dibuat.' : 'Export berhasil dijadwalkan di background.',
         ]);
     }
 
@@ -399,8 +471,6 @@ class ManagerController extends Controller
                     'status' => 'failed',
                     'error_message' => 'Antrean export tidak berjalan di server (Queue worker tidak aktif). Silakan jalankan queue worker atau ubah QUEUE_CONNECTION=sync di .env.',
                 ]);
-            } else {
-                self::ensureQueueWorkerRunning();
             }
         }
 
@@ -440,10 +510,14 @@ class ManagerController extends Controller
             ->limit(5)
             ->get()
             ->map(function ($e) {
-                $monthCarbon = Carbon::createFromDate($e->year, $e->month, 1);
+                $label = $e->period_label;
+                if (empty($label)) {
+                    $monthCarbon = Carbon::createFromDate($e->year, $e->month, 1);
+                    $label = $monthCarbon->translatedFormat('F Y');
+                }
                 return [
                     'id' => $e->id,
-                    'month_label' => $monthCarbon->translatedFormat('F Y'),
+                    'month_label' => $label,
                     'status' => $e->status,
                     'percent' => $e->percent,
                     'processed' => $e->processed_marketing,
@@ -466,13 +540,18 @@ class ManagerController extends Controller
             return;
         }
 
+        // Jangan spawn worker berkali-kali jika sudah dipicu dalam 120 detik terakhir
+        if (! Cache::add('export_worker_spawn_lock', true, 120)) {
+            return;
+        }
+
         $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
         $artisanPath = base_path('artisan');
 
         try {
             if ($isWindows) {
                 $phpBinary = PHP_BINARY;
-                $cmd = "start /B \"\" \"{$phpBinary}\" \"{$artisanPath}\" queue:work --stop-when-empty > NUL 2>&1";
+                $cmd = "start /B \"\" \"{$phpBinary}\" \"{$artisanPath}\" queue:work --stop-when-empty --timeout=900 --memory=512 > NUL 2>&1";
                 @pclose(@popen($cmd, 'r'));
             } else {
                 // Di Linux, jika PHP berjalan di bawah FPM (Nginx/Apache), PHP_BINARY merujuk ke php-fpm bukan php-cli
@@ -487,7 +566,7 @@ class ManagerController extends Controller
                     }
                 }
 
-                $cmd = "\"{$phpBinary}\" \"{$artisanPath}\" queue:work --stop-when-empty > /dev/null 2>&1 &";
+                $cmd = "\"{$phpBinary}\" \"{$artisanPath}\" queue:work --stop-when-empty --timeout=900 --memory=512 > /dev/null 2>&1 &";
                 @exec($cmd);
             }
         } catch (\Throwable $e) {
@@ -497,24 +576,26 @@ class ManagerController extends Controller
 
     private function buildMarketingSpreadsheet(
         User $m,
-        Carbon $monthStart,
-        int $daysInMonth,
-        string $monthLabel,
+        Carbon $startDate,
+        Carbon|int $endDateOrDays,
+        string $periodLabel,
         $userTodos,
         $targetProspectsByUser,
         $allWeeklyUpdates,
-        array $tasksList
+        array $tasksList,
+        string $exportType = 'monthly'
     ): Spreadsheet {
         $job = new ExportTodosJob(new TodoExport());
         return $job->buildFastMarketingSpreadsheet(
             $m,
-            $monthStart,
-            $daysInMonth,
-            $monthLabel,
+            $startDate,
+            $endDateOrDays,
+            $periodLabel,
             $userTodos,
             $targetProspectsByUser,
             $allWeeklyUpdates,
-            $tasksList
+            $tasksList,
+            $exportType
         );
     }
 
@@ -593,6 +674,9 @@ class ManagerController extends Controller
         $completedProspectsCount = $prospectsList->where('has_update', true)->count();
         $isDayComplete = $targetCount > 0 ? ($completedProspectsCount >= $targetCount) : false;
 
+        $taskUpdates = $this->buildTaskUpdates($todo);
+        $formattedPdfs = $this->formatPdfsGrouped($todo);
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -605,7 +689,8 @@ class ManagerController extends Controller
             'prospect_progress_note' => $prospectNote,
             'note_date_info' => $noteDateInfo,
             'links' => $linksByKey,
-            'pdfs' => $todo->pdfs->groupBy('task'),
+            'pdfs' => $formattedPdfs,
+            'task_updates' => $taskUpdates,
             'prospects_list' => $prospectsList,
             'target_count' => $targetCount,
             'completed_prospects_count' => $completedProspectsCount,
@@ -776,6 +861,9 @@ class ManagerController extends Controller
                 $affectedDays = [(int) $date->day];
             }
 
+            $taskUpdates = $this->buildTaskUpdates($todo);
+            $formattedPdfs = $this->formatPdfsGrouped($todo);
+
             return response()->json([
                 'success' => true,
                 'message' => "Tugas {$task} berhasil disimpan.",
@@ -785,7 +873,8 @@ class ManagerController extends Controller
                 'date' => $date->toDateString(),
                 'isCompleted' => $isCompleted,
                 'links' => $todo->links()->get()->groupBy('platform')->map->keyBy('slot'),
-                'pdfs' => $todo->pdfs()->latest()->get()->groupBy('task'),
+                'pdfs' => $formattedPdfs,
+                'task_updates' => $taskUpdates,
                 'prospect_progress_note' => $todo->prospect_progress_note,
             ]);
         }
@@ -807,6 +896,8 @@ class ManagerController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             $remainingCount = $todo ? $todo->pdfs()->where('task', $task)->count() : 0;
+            $todo?->load(['links', 'pdfs']);
+            $taskUpdates = $todo ? $this->buildTaskUpdates($todo) : [];
 
             return response()->json([
                 'success' => true,
@@ -816,10 +907,83 @@ class ManagerController extends Controller
                 'userId' => $userId,
                 'isCompleted' => $remainingCount > 0,
                 'remainingCount' => $remainingCount,
+                'task_updates' => $taskUpdates,
             ]);
         }
 
         return back()->with('status', 'File PDF berhasil dihapus.');
+    }
+
+    private function buildTaskUpdates(Todo $todo): array
+    {
+        Carbon::setLocale('id');
+        $taskUpdates = [];
+
+        // Tugas 1: 12 Link
+        $filledLinks = $todo->links->filter(fn ($l) => ! empty(trim((string) $l->url)));
+        if ($filledLinks->isNotEmpty()) {
+            $latestLink = $filledLinks->max('updated_at') ?? $filledLinks->max('created_at');
+            $c = $latestLink ? Carbon::parse($latestLink) : null;
+            $taskUpdates[1] = [
+                'has_update' => true,
+                'updated_at' => $c ? $c->locale('id')->diffForHumans() : null,
+                'updated_at_full' => $c ? $c->locale('id')->translatedFormat('d M Y, H:i') . ' WIB' : null,
+                'is_recent' => $c ? ($c->diffInHours(now()) <= 24) : false,
+            ];
+        } else {
+            $taskUpdates[1] = [
+                'has_update' => false,
+                'updated_at' => null,
+                'updated_at_full' => null,
+                'is_recent' => false,
+            ];
+        }
+
+        // Tugas 2 - 6: Upload PDF / Gambar
+        for ($t = 2; $t <= 6; $t++) {
+            $taskPdfs = $todo->pdfs->where('task', $t);
+            if ($taskPdfs->isNotEmpty()) {
+                $latestPdf = $taskPdfs->max('updated_at') ?? $taskPdfs->max('created_at');
+                $c = $latestPdf ? Carbon::parse($latestPdf) : null;
+                $taskUpdates[$t] = [
+                    'has_update' => true,
+                    'updated_at' => $c ? $c->locale('id')->diffForHumans() : null,
+                    'updated_at_full' => $c ? $c->locale('id')->translatedFormat('d M Y, H:i') . ' WIB' : null,
+                    'is_recent' => $c ? ($c->diffInHours(now()) <= 24) : false,
+                ];
+            } else {
+                $taskUpdates[$t] = [
+                    'has_update' => false,
+                    'updated_at' => null,
+                    'updated_at_full' => null,
+                    'is_recent' => false,
+                ];
+            }
+        }
+
+        return $taskUpdates;
+    }
+
+    private function formatPdfsGrouped(Todo $todo)
+    {
+        Carbon::setLocale('id');
+
+        return $todo->pdfs->map(function ($pdf) {
+            $c = $pdf->updated_at ?? $pdf->created_at;
+            $cParsed = $c ? Carbon::parse($c) : null;
+
+            return [
+                'id' => $pdf->id,
+                'todo_id' => $pdf->todo_id,
+                'task' => $pdf->task,
+                'file_path' => $pdf->file_path,
+                'original_name' => $pdf->original_name,
+                'created_at' => $pdf->created_at,
+                'updated_at' => $pdf->updated_at,
+                'updated_ago' => $cParsed ? $cParsed->locale('id')->diffForHumans() : null,
+                'updated_full' => $cParsed ? $cParsed->locale('id')->translatedFormat('d M Y, H:i') . ' WIB' : null,
+            ];
+        })->groupBy('task');
     }
 
     private function marketings()

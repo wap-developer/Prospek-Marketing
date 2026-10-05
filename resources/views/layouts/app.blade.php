@@ -1224,13 +1224,13 @@
         .footer-contact {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
         }
 
         .contact-item {
-            display: inline-flex;
-            align-items: center;
+            display: flex;
+            align-items: flex-start;
             gap: 10px;
             font-size: 14px;
             color: var(--text-secondary);
@@ -1247,6 +1247,7 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            margin-top: 2px;
         }
 
         .contact-item a {
@@ -1260,6 +1261,34 @@
 
         .contact-item a::before {
             display: none;
+        }
+
+        .contact-phones {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .contact-phones a {
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            text-decoration: none;
+            transition: color .15s ease;
+        }
+
+        .contact-phones a:hover {
+            color: var(--primary-600);
+            text-decoration: underline;
+        }
+
+        .contact-address {
+            line-height: 1.55;
+            font-size: 13.5px;
+            word-break: break-word;
+        }
+
+        .footer-links-grid {
+            display: contents;
         }
 
         /* Bottom bar */
@@ -1465,33 +1494,101 @@
                 max-width: 100%;
             }
 
+            .page-header {
+                margin-bottom: 16px;
+                gap: 8px;
+            }
+
+            .page-header h1 {
+                font-size: 22px;
+            }
+
+            .page-header p {
+                font-size: 13px;
+                line-height: 1.45;
+            }
+
             .app-header-inner {
                 padding: 0 16px;
             }
 
             .app-footer-inner {
-                padding: 0 20px;
+                padding: 0 16px;
             }
 
             .app-footer-grid {
                 grid-template-columns: 1fr;
-                gap: 28px;
-                padding: 32px 0;
+                gap: 22px;
+                padding: 24px 0 16px;
             }
 
-            .footer-cta {
-                flex-direction: column;
-                align-items: stretch;
-                padding: 24px 0;
+            .footer-links-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 18px;
             }
 
-            .footer-cta-form {
-                min-width: 0;
+            .brand-block .footer-logo img {
+                height: 30px;
+            }
+
+            .brand-block p.tagline {
+                font-size: 12.5px;
+                line-height: 1.5;
+                margin: 0 0 14px;
+                max-width: 100%;
+            }
+
+            .footer-contact {
+                gap: 10px;
+                margin-bottom: 0;
+            }
+
+            .contact-item {
+                font-size: 12.5px;
+                gap: 9px;
+            }
+
+            .contact-item .ic-box {
+                width: 26px;
+                height: 26px;
+                border-radius: 7px;
+            }
+
+            .contact-phones a,
+            .contact-address {
+                font-size: 12.5px;
+                line-height: 1.5;
+            }
+
+            .app-footer h4 {
+                font-size: 12.5px;
+                margin: 0 0 10px;
+                padding-bottom: 6px;
+            }
+
+            .app-footer li {
+                margin-bottom: 8px;
+                font-size: 12.5px;
+            }
+
+            .app-footer a {
+                font-size: 12.5px;
+                padding: 3px 0;
             }
 
             .app-footer-bottom {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: center;
+                text-align: center;
+                padding: 14px 0 20px;
+                font-size: 12px;
+                gap: 8px;
+            }
+
+            .app-footer-bottom .copy {
+                text-align: center;
+                line-height: 1.5;
             }
         }
 
@@ -1565,12 +1662,55 @@
         @media (max-width: 900px) {
             .hero {
                 grid-template-columns: 1fr;
-                gap: 18px;
-                padding: 22px 0 28px;
+                gap: 16px;
+                padding: 18px 0 22px;
             }
 
             .hero-title {
-                font-size: 29px;
+                font-size: 26px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 12px 0 16px;
+            }
+
+            .hero-illustration {
+                display: none;
+            }
+
+            .hero-greet {
+                font-size: 12.5px;
+                margin-bottom: 2px;
+            }
+
+            .hero-title {
+                font-size: 21px;
+                margin-bottom: 6px;
+            }
+
+            .hero-desc {
+                font-size: 13px;
+                line-height: 1.45;
+                margin: 0 0 12px;
+            }
+
+            .hero-actions {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                width: 100%;
+            }
+
+            .hero-actions .btn {
+                padding: 9px 10px;
+                font-size: 12.5px;
+                border-radius: 9px;
+                justify-content: center;
+                text-align: center;
             }
         }
 
@@ -1679,13 +1819,46 @@
             }
 
             .kpi-grid-2 {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
             }
         }
 
-        @media (max-width: 720px) {
+        @media (max-width: 640px) {
             .kpi-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+
+            .kpi-grid-2 {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .kpi-card {
+                padding: 12px 14px;
+                border-radius: 12px;
+                min-height: auto;
+            }
+
+            .kpi-icon {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                margin-bottom: 4px;
+            }
+
+            .kpi-label {
+                font-size: 10px;
+            }
+
+            .kpi-value {
+                font-size: 20px;
+            }
+
+            .kpi-meta {
+                font-size: 10.5px;
+                margin-top: 2px;
             }
         }
 
@@ -2393,12 +2566,12 @@
                                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                                 </svg>
                             </span>
-                            <span>
-                                +62 811-8999-7817 <br />
-                                +62 812-8094-7373 <br />
-                                +62 811-8803-6939 <br />
-                                +62 813-5009-5007 <br />
-                            </span>
+                            <div class="contact-phones">
+                                <a href="tel:+6281189997817">+62 811-8999-7817</a>
+                                <a href="tel:+6281280947373">+62 812-8094-7373</a>
+                                <a href="tel:+6281188036939">+62 811-8803-6939</a>
+                                <a href="tel:+6281350095007">+62 813-5009-5007</a>
+                            </div>
                         </div>
                         <div class="contact-item">
                             <span class="ic-box">
@@ -2407,41 +2580,43 @@
                                     <circle cx="12" cy="10" r="3" />
                                 </svg>
                             </span>
-                            <span>18 Office Park Building Lantai 21 Unit C
-                                <br />
-                                Jl. TB Simatupang No.18 Kel. Kebagusan, Kec. Pasar Minggu <br /> Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12520</span>
+                            <span class="contact-address">18 Office Park Building Lantai 21 Unit C<br />
+                                Jl. TB Simatupang No.18 Kel. Kebagusan, Kec. Pasar Minggu<br />
+                                Kota Jakarta Selatan, DKI Jakarta 12520</span>
                         </div>
                     </div>
                 </div>
 
-                <div>
-                    <h4>Navigasi</h4>
-                    <ul>
-                        @auth
-                        @php $role = auth()->user()->role?->slug; @endphp
-                        <li><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                        @if ($role === 'marketing')
-                        <li><a href="{{ route('prospects.index') }}">Prospek Saya</a></li>
-                        <li><a href="{{ route('todos.daily') }}">To Do Harian</a></li>
-                        @else
-                        <li><a href="{{ route('prospects.index') }}">Prospek</a></li>
-                        @if (in_array($role, ['manager_marketing','super_admin']))
-                        <li><a href="{{ route('manager.todos') }}">Monitor To Do</a></li>
-                        @endif
-                        @if ($role === 'super_admin')
-                        <li><a href="{{ route('admin.users.index') }}">Users</a></li>
-                        <li><a href="{{ route('admin.masters.index') }}">Master Data</a></li>
-                        @endif
-                        @endif
-                        @endauth
-                    </ul>
-                </div>
+                <div class="footer-links-grid">
+                    <div>
+                        <h4>Navigasi</h4>
+                        <ul>
+                            @auth
+                            @php $role = auth()->user()->role?->slug; @endphp
+                            <li><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                            @if ($role === 'marketing')
+                            <li><a href="{{ route('prospects.index') }}">Prospek Saya</a></li>
+                            <li><a href="{{ route('todos.daily') }}">To Do Harian</a></li>
+                            @else
+                            <li><a href="{{ route('prospects.index') }}">Prospek</a></li>
+                            @if (in_array($role, ['manager_marketing','super_admin']))
+                            <li><a href="{{ route('manager.todos') }}">Monitor To Do</a></li>
+                            @endif
+                            @if ($role === 'super_admin')
+                            <li><a href="{{ route('admin.users.index') }}">Users</a></li>
+                            <li><a href="{{ route('admin.masters.index') }}">Master Data</a></li>
+                            @endif
+                            @endif
+                            @endauth
+                        </ul>
+                    </div>
 
-                <div>
-                    <h4>Bantuan</h4>
-                    <ul>
-                        <li><a href="https://wa.me/+6285924585391">Kontak Support</a></li>
-                    </ul>
+                    <div>
+                        <h4>Bantuan</h4>
+                        <ul>
+                            <li><a href="https://wa.me/+6285924585391" target="_blank" rel="noopener noreferrer">Kontak Support</a></li>
+                        </ul>
+                    </div>
                 </div>
 
             </div>

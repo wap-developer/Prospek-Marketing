@@ -1216,7 +1216,7 @@
 
         .cal-dow {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             padding: 14px 24px 8px;
             gap: 6px;
         }
@@ -1227,16 +1227,20 @@
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: .06em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .cal-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 6px;
             padding: 0 24px 24px;
         }
         .cal-day {
             position: relative;
+            min-width: 0;
             aspect-ratio: 1 / 1;
             min-height: 70px;
             border: 1px solid var(--border);
@@ -1250,6 +1254,8 @@
             cursor: pointer;
             text-decoration: none;
             color: inherit;
+            overflow: hidden;
+            box-sizing: border-box;
             transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
         }
         .cal-day:hover {
@@ -1257,8 +1263,8 @@
             border-color: var(--primary-200);
             box-shadow: 0 6px 16px rgba(37,99,235,.10);
         }
-        .cal-day.outside { opacity: .35; }
-        .cal-day.future { cursor: not-allowed; opacity: .55; }
+        .cal-day.outside { opacity: .35; justify-content: center; align-items: center; }
+        .cal-day.future { cursor: not-allowed; opacity: .55; justify-content: center; align-items: center; }
         .cal-day.future:hover { transform: none; border-color: var(--border); box-shadow: none; }
         .cal-day.today {
             border-color: var(--primary-500);
@@ -1292,9 +1298,17 @@
             text-align: center;
             font-weight: 600;
             line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            width: 100%;
         }
         .cal-day.ok .meta { color: #047857; }
         .cal-day.partial .meta { color: #B45309; }
+
+        .meta-full { display: inline; }
+        .meta-short { display: none; }
 
         .cal-legend {
             display: flex;
@@ -1351,10 +1365,141 @@
         .cal-today-cta .btn:hover { transform: translateY(-1px); color: var(--primary-700); }
 
         @media (max-width: 720px) {
-            .cal-day { min-height: 56px; padding: 6px 4px; }
-            .cal-day .num { font-size: 12px; }
-            .cal-day .meta { font-size: 9px; }
-            .cal-dow, .cal-grid { padding-left: 14px; padding-right: 14px; }
+            .meta-full { display: none; }
+            .meta-short { display: inline; }
+
+            .cal-card {
+                border-radius: 14px;
+            }
+
+            .cal-head {
+                padding: 14px 12px;
+                gap: 10px;
+            }
+            .cal-month {
+                gap: 8px;
+            }
+            .cal-month .m-ic {
+                width: 34px;
+                height: 34px;
+                border-radius: 9px;
+            }
+            .cal-month .m-name {
+                font-size: 15px;
+            }
+            .cal-month .m-year {
+                font-size: 11px;
+            }
+            .cal-nav {
+                gap: 4px;
+            }
+            .cal-nav .nav-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+            }
+            .cal-stats {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .cal-stat {
+                justify-content: center;
+                padding: 5px 8px;
+                font-size: 11px;
+            }
+
+            .cal-today-cta {
+                padding: 12px 14px;
+                gap: 10px;
+            }
+            .cal-today-cta .ti {
+                gap: 10px;
+            }
+            .cal-today-cta .ti-ic {
+                width: 34px;
+                height: 34px;
+                border-radius: 8px;
+            }
+            .cal-today-cta .ti-tt {
+                font-size: 13px;
+            }
+            .cal-today-cta .ti-st {
+                font-size: 11.5px;
+            }
+            .cal-today-cta .btn {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+                padding: 9px 12px;
+                font-size: 12.5px;
+            }
+
+            .cal-dow {
+                padding: 10px 8px 6px;
+                gap: 4px;
+            }
+            .cal-dow span {
+                font-size: 10px;
+            }
+
+            .cal-grid {
+                padding: 0 8px 16px;
+                gap: 4px;
+            }
+
+            .cal-day {
+                min-height: 52px;
+                padding: 5px 2px 4px;
+                border-radius: 8px;
+            }
+            .cal-day .num {
+                font-size: 11.5px;
+                text-align: center;
+            }
+            .cal-day .dots {
+                gap: 2px;
+                height: 4px;
+                margin: 2px 0;
+            }
+            .cal-day .dot {
+                width: 4px;
+                height: 4px;
+            }
+            .cal-day .meta {
+                font-size: 8.5px;
+                line-height: 1;
+            }
+
+            .cal-legend {
+                padding: 10px 10px 14px;
+                gap: 8px 12px;
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .cal-dow, .cal-grid {
+                padding-left: 4px;
+                padding-right: 4px;
+                gap: 3px;
+            }
+            .cal-day {
+                min-height: 48px;
+                padding: 4px 1px 3px;
+                border-radius: 6px;
+            }
+            .cal-day .num {
+                font-size: 10.5px;
+            }
+            .cal-day .meta {
+                font-size: 8px;
+            }
+            .cal-day .dot {
+                width: 3.5px;
+                height: 3.5px;
+            }
         }
     </style>
 
@@ -1447,7 +1592,8 @@
                             </span>
                             <span class="meta">
                                 @if ($st === 'ok')
-                                    ✓ Lengkap
+                                    <span class="meta-full">✓ Lengkap</span>
+                                    <span class="meta-short">✓ 7/7</span>
                                 @elseif ($st === 'partial')
                                     {{ $monthStatus[$key]['tasksDone'] ?? 0 }}/{{ $monthStatus[$key]['tasksTotal'] ?? 7 }}
                                 @else

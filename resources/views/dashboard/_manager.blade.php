@@ -395,6 +395,166 @@
         .kpi-grid-mgr {
             grid-template-columns: 1fr;
         }
+
+        .mgr-hero {
+            padding: 12px 0 16px;
+            gap: 12px;
+        }
+
+        .mgr-hero-title {
+            font-size: 21px;
+            margin-bottom: 6px;
+        }
+
+        .mgr-hero-desc {
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        .mgr-hero .hero-illustration {
+            display: none;
+        }
+
+        .mgr-hero .hero-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .mgr-hero .hero-actions .btn {
+            padding: 9px 8px;
+            font-size: 12px;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .kpi-grid-mgr {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .kpi-grid-mgr .kpi-card:last-child {
+            grid-column: span 2;
+        }
+
+        .kpi-card {
+            padding: 12px 14px;
+            border-radius: 12px;
+        }
+
+        .kpi-card .kpi-head {
+            margin-bottom: 8px;
+        }
+
+        .kpi-card .kpi-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+
+        .kpi-card .kpi-label {
+            font-size: 10.5px;
+            margin-bottom: 4px;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 22px;
+        }
+
+        .kpi-card .kpi-sub {
+            font-size: 11px;
+            margin-top: 6px;
+        }
+
+        .kpi-badge-delta {
+            font-size: 10px;
+            padding: 3px 7px;
+        }
+
+        .analytics-card {
+            padding: 14px;
+            border-radius: 14px;
+        }
+
+        .card-title-wrap {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .card-title-wrap h3 {
+            font-size: 14px;
+        }
+
+        .chart-legend {
+            width: 100%;
+            justify-content: flex-start;
+            gap: 12px;
+            font-size: 11px;
+        }
+
+        .chart-bars-container {
+            height: 180px;
+            gap: 6px;
+            padding-top: 14px;
+            padding-bottom: 4px;
+        }
+
+        .bars-wrapper {
+            height: 140px;
+            gap: 3px;
+        }
+
+        .single-bar {
+            max-width: 12px;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .bar-month-label {
+            font-size: 10px;
+            margin-top: 6px;
+        }
+
+        .summary-breakdown-list {
+            gap: 8px;
+        }
+
+        .summary-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+        }
+
+        .summary-item .info h4 {
+            font-size: 12px;
+        }
+
+        .summary-item .info p {
+            font-size: 10.5px;
+        }
+
+        .summary-item .num {
+            font-size: 15px;
+        }
+
+        .compliance-card-head {
+            padding: 12px 14px !important;
+            gap: 10px !important;
+        }
+
+        .compliance-card-head h3 {
+            font-size: 13.5px !important;
+        }
+
+        .compliance-card-head a.btn {
+            width: 100%;
+            justify-content: center;
+            font-size: 11.5px;
+        }
+    }
     }
 </style>
 
@@ -514,12 +674,6 @@
         </div>
     </div>
 </section>
-</div>
-<div class="kpi-sub">
-    <span>Total: Rp {{ number_format($nominalMonth ?? 0, 0, ',', '.') }}</span>
-</div>
-</div>
-</section>
 
 {{-- Chart & Comparison Section --}}
 <section class="chart-layout-grid">
@@ -615,16 +769,11 @@
             </div>
         </div>
     </div>
-    </div>
-    <div class="num" style="color:#2563EB;">{{ $activeMarketings ?? 0 }} Orang</div>
-    </div>
-    </div>
-    </div>
 </section>
 
 {{-- Kepatuhan To-Do Hari Ini --}}
 <section class="analytics-card" style="padding: 0; overflow: hidden; margin-bottom: 28px;">
-    <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div class="compliance-card-head" style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
         <div>
             <h3 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary-600);">

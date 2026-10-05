@@ -321,9 +321,54 @@
         }
     }
     @media (max-width: 640px) {
+        .todo-compact-card {
+            padding: 12px 14px;
+            gap: 10px;
+        }
+        .todo-compact-title {
+            font-size: 13.5px;
+        }
+        .todo-mini-ic {
+            width: 28px;
+            height: 28px;
+        }
+        .todo-compact-chips {
+            padding: 4px 0;
+        }
+        .todo-chip .val {
+            font-size: 12px;
+        }
+        .todo-chip .lbl {
+            font-size: 9.5px;
+        }
         .kpi-grid-4 {
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .kpi-card {
+            padding: 12px 14px;
+        }
+        .kpi-card .kpi-head {
+            margin-bottom: 8px;
+        }
+        .kpi-card .kpi-icon {
+            width: 32px;
+            height: 32px;
+        }
+        .kpi-card .kpi-value {
+            font-size: 20px;
+            margin: 4px 0 2px;
+        }
+        .kpi-card .kpi-label {
+            font-size: 10.5px;
+        }
+        .kpi-card .kpi-meta {
+            font-size: 10px;
+            margin-top: 4px;
+        }
+        .section-header {
+            margin-bottom: 12px;
         }
     }
 </style>

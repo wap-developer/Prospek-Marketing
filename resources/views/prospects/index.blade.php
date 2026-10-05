@@ -3,6 +3,10 @@
 @section('title', 'Daftar Prospek — HIVEFIVE')
 
 @section('content')
+    @php
+        use Carbon\Carbon;
+        Carbon::setLocale('id');
+    @endphp
     <style>
         .prospects-page { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 100%; min-width: 0; }
 
@@ -623,7 +627,7 @@
 
         .prospect-table {
             width: 100%;
-            min-width: 860px;
+            min-width: 980px;
             border-collapse: collapse;
             font-size: 13.5px;
         }
@@ -732,6 +736,41 @@
 
         .nominal { font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
         .nominal.empty { color: var(--text-muted); font-weight: 500; }
+
+        .cell-update { white-space: nowrap; }
+        .update-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #F1F5F9;
+            color: #475569;
+            border: 1px solid #E2E8F0;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            transition: all .15s ease;
+        }
+        .update-badge svg {
+            color: #64748B;
+            flex-shrink: 0;
+        }
+        .update-badge.is-recent {
+            background: #ECFDF5;
+            color: #065F46;
+            border-color: #A7F3D0;
+        }
+        .update-badge.is-recent svg {
+            color: #059669;
+        }
+        .update-empty {
+            display: inline-block;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            padding-left: 6px;
+        }
 
         .row-actions {
             display: inline-flex;
@@ -1213,7 +1252,7 @@
                                     @php
                                         $sLabel = match(strtolower($s->slug)) {
                                             'open' => 'OPEN',
-                                            'closing' => 'CLOSE',
+                                            'closing' => 'CLOSING',
                                             default => strtoupper($s->name),
                                         };
                                     @endphp
@@ -1332,6 +1371,7 @@
                             <th>Marketing</th>
                             <th>Group</th>
                             <th>Status</th>
+                            <th>Waktu Update</th>
                             <th>Nominal</th>
                             <th style="text-align:right;">Aksi</th>
                         </tr>
@@ -1343,6 +1383,11 @@
                                 if (strlen($initials) < 2) { $initials = strtoupper(substr($p->client_phone, 0, 2)); }
                                 $slug = $p->status->slug ?? '';
                                 $badgeClass = in_array($slug, ['open','closing','cancel']) ? 'badge-'.$slug : 'badge-default';
+
+                                $latestWeekly = $p->weeklyUpdates->max('updated_at');
+                                $latestTime = ($latestWeekly && $latestWeekly > $p->updated_at) ? $latestWeekly : $p->updated_at;
+                                $isUpdated = ($p->weeklyUpdates->isNotEmpty() || ($p->updated_at && $p->created_at && $p->updated_at->gt($p->created_at)));
+                                $isRecent = $isUpdated && $latestTime && $latestTime->diffInHours(now()) <= 24;
                             @endphp
                             <tr>
                                 <td style="text-align: center; font-weight: 700; color: var(--text-secondary); font-size: 13px;">
@@ -1369,7 +1414,20 @@
                                     </div>
                                 </td>
                                 <td><span class="grp-chip">{{ $p->group->name ?? '-' }}</span></td>
-                                <td><span class="badge {{ $badgeClass }}">{{ $slug === 'closing' ? 'CLOSE' : $p->status->name }}</span></td>
+                                <td><span class="badge {{ $badgeClass }}">{{ $slug === 'closing' ? 'CLOSING' : strtoupper($p->status->name ?? '') }}</span></td>
+                                <td class="cell-update">
+                                    @if ($isUpdated && $latestTime)
+                                        <div class="update-badge {{ $isRecent ? 'is-recent' : '' }}" title="Update terakhir: {{ $latestTime->locale('id')->translatedFormat('d M Y, H:i') }} WIB">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <polyline points="12 6 12 12 16 14"/>
+                                            </svg>
+                                            <span>{{ $latestTime->locale('id')->diffForHumans() }}</span>
+                                        </div>
+                                    @else
+                                        <span class="update-empty" title="Belum pernah diupdate oleh marketing">—</span>
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($p->nominal_closing)
                                         <span class="nominal">Rp {{ number_format($p->nominal_closing, 0, ',', '.') }}</span>
@@ -1406,7 +1464,7 @@
                             </tr>
                         @empty
                             <tr class="empty-row">
-                                <td colspan="9">
+                                <td colspan="10">
                                     <div class="empty-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     </div>
@@ -1505,6 +1563,7 @@
                             <th>Marketing</th>
                             <th>Group</th>
                             <th>Status</th>
+                            <th>Waktu Update</th>
                             <th>Nominal</th>
                             <th style="text-align:right;">Aksi</th>
                         </tr>
@@ -1516,6 +1575,11 @@
                                 if (strlen($initials) < 2) { $initials = strtoupper(substr($p->client_phone, 0, 2)); }
                                 $slug = $p->status->slug ?? '';
                                 $badgeClass = in_array($slug, ['open','closing','cancel']) ? 'badge-'.$slug : 'badge-default';
+
+                                $latestWeekly = $p->weeklyUpdates->max('updated_at');
+                                $latestTime = ($latestWeekly && $latestWeekly > $p->updated_at) ? $latestWeekly : $p->updated_at;
+                                $isUpdated = ($p->weeklyUpdates->isNotEmpty() || ($p->updated_at && $p->created_at && $p->updated_at->gt($p->created_at)));
+                                $isRecent = $isUpdated && $latestTime && $latestTime->diffInHours(now()) <= 24;
                             @endphp
                             <tr>
                                 <td style="text-align: center; font-weight: 700; color: var(--text-secondary); font-size: 13px;">
@@ -1542,7 +1606,20 @@
                                     </div>
                                 </td>
                                 <td><span class="grp-chip">{{ $p->group->name ?? '-' }}</span></td>
-                                <td><span class="badge {{ $badgeClass }}">{{ $slug === 'closing' ? 'CLOSE' : $p->status->name }}</span></td>
+                                <td><span class="badge {{ $badgeClass }}">{{ $slug === 'closing' ? 'CLOSING' : strtoupper($p->status->name ?? '') }}</span></td>
+                                <td class="cell-update">
+                                    @if ($isUpdated && $latestTime)
+                                        <div class="update-badge {{ $isRecent ? 'is-recent' : '' }}" title="Update terakhir: {{ $latestTime->locale('id')->translatedFormat('d M Y, H:i') }} WIB">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <polyline points="12 6 12 12 16 14"/>
+                                            </svg>
+                                            <span>{{ $latestTime->locale('id')->diffForHumans() }}</span>
+                                        </div>
+                                    @else
+                                        <span class="update-empty" title="Belum pernah diupdate oleh marketing">—</span>
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($p->nominal_closing)
                                         <span class="nominal">Rp {{ number_format($p->nominal_closing, 0, ',', '.') }}</span>
@@ -1579,7 +1656,7 @@
                             </tr>
                         @empty
                             <tr class="empty-row">
-                                <td colspan="9">
+                                <td colspan="10">
                                     <div class="empty-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     </div>
@@ -1659,6 +1736,10 @@
                         <span class="p-detail-value" id="modalDetailEntryDate">-</span>
                     </div>
                     <div class="p-detail-card">
+                        <span class="p-detail-label">Update Terakhir</span>
+                        <span class="p-detail-value" id="modalDetailUpdatedAt">-</span>
+                    </div>
+                    <div class="p-detail-card">
                         <span class="p-detail-label">Nominal Closing</span>
                         <span class="p-detail-value" id="modalDetailNominal" style="color: #047857;">-</span>
                     </div>
@@ -1735,6 +1816,12 @@
                 ];
             }
 
+            $latestWeekly = $p->weeklyUpdates->max('updated_at');
+            $latestTime = ($latestWeekly && $latestWeekly > $p->updated_at) ? $latestWeekly : $p->updated_at;
+            $isUpdated = ($p->weeklyUpdates->isNotEmpty() || ($p->updated_at && $p->created_at && $p->updated_at->gt($p->created_at)));
+            $updatedAgo = ($isUpdated && $latestTime) ? $latestTime->locale('id')->diffForHumans() : 'Belum diupdate';
+            $updatedFull = ($isUpdated && $latestTime) ? $latestTime->locale('id')->translatedFormat('d M Y, H:i') . ' WIB' : '—';
+
             $prospectsPayload[$p->id] = [
                 'id' => $p->id,
                 'client_phone' => $p->client_phone,
@@ -1745,9 +1832,12 @@
                 'sender_name' => $p->sender->name ?? '-',
                 'group_name' => $p->group->name ?? '-',
                 'source_name' => $p->source->name ?? '-',
-                'status_name' => $slug === 'closing' ? 'CLOSE' : ($p->status->name ?? '-'),
+                'status_name' => $slug === 'closing' ? 'CLOSING' : strtoupper($p->status->name ?? '-'),
                 'status_slug' => $slug,
                 'status_badge_class' => $badgeClass,
+                'is_updated' => $isUpdated,
+                'updated_ago' => $updatedAgo,
+                'updated_full' => $updatedFull,
                 'entry_date' => $p->entry_date ? $p->entry_date->translatedFormat('d F Y') : '-',
                 'entry_time' => $p->entry_time ?? '-',
                 'nominal_closing' => $p->nominal_closing ? 'Rp ' . number_format($p->nominal_closing, 0, ',', '.') : '—',
@@ -1796,6 +1886,18 @@
         document.getElementById('modalDetailSender').textContent = p.sender_name;
         document.getElementById('modalDetailGroup').textContent = p.group_name;
         document.getElementById('modalDetailEntryDate').textContent = p.entry_date + ' (' + p.entry_time + ')';
+        const updateEl = document.getElementById('modalDetailUpdatedAt');
+        if (updateEl) {
+            if (p.is_updated) {
+                updateEl.textContent = p.updated_ago + (p.updated_full && p.updated_full !== '—' ? ' (' + p.updated_full + ')' : '');
+                updateEl.style.color = '#047857';
+                updateEl.style.fontWeight = '700';
+            } else {
+                updateEl.textContent = 'Belum pernah diupdate';
+                updateEl.style.color = 'var(--text-muted)';
+                updateEl.style.fontWeight = '500';
+            }
+        }
         document.getElementById('modalDetailNominal').textContent = p.nominal_closing;
         document.getElementById('modalDetailClosedAt').textContent = p.closed_at;
         document.getElementById('modalDetailCreator').textContent = p.creator_name;

@@ -129,4 +129,62 @@ class TodoExportQueueTest extends TestCase
         // Cleanup generated test zip file
         @unlink($export->file_path);
     }
+
+    public function test_manager_can_start_date_range_and_daily_export(): void
+    {
+        Queue::fake();
+
+        $managerRole = Role::firstOrCreate(['slug' => 'manager_marketing'], ['name' => 'Manager Marketing']);
+        $marketingRole = Role::firstOrCreate(['slug' => 'marketing'], ['name' => 'Marketing']);
+
+        $manager = User::factory()->create(['role_id' => $managerRole->id]);
+        User::factory()->create(['name' => 'Test Marketing 2', 'role_id' => $marketingRole->id]);
+
+        // Range test
+        $rangeResponse = $this->actingAs($manager)->postJson(route('manager.todos.export.start'), [
+            'type' => 'range',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-07',
+        ]);
+
+        $rangeResponse->assertOk()->assertJson(['status' => 'success']);
+        $rangeExportId = $rangeResponse->json('export_id');
+        $this->assertDatabaseHas('todo_exports', [
+            'id' => $rangeExportId,
+            'export_type' => 'range',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-07',
+        ]);
+
+        // Daily test
+        $dailyResponse = $this->actingAs($manager)->postJson(route('manager.todos.export.start'), [
+            'type' => 'daily',
+            'single_date' => '2026-09-04',
+        ]);
+
+        $dailyResponse->assertOk()->assertJson(['status' => 'success']);
+        $dailyExportId = $dailyResponse->json('export_id');
+        $this->assertDatabaseHas('todo_exports', [
+            'id' => $dailyExportId,
+            'export_type' => 'daily',
+            'start_date' => '2026-09-04',
+            'end_date' => '2026-09-04',
+        ]);
+
+        // Direct export download test (range & daily)
+        $directRange = $this->actingAs($manager)->get(route('manager.todos.export', [
+            'type' => 'range',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-03',
+        ]));
+        $directRange->assertOk();
+        $this->assertStringContainsString('application/zip', $directRange->headers->get('Content-Type'));
+
+        $directDaily = $this->actingAs($manager)->get(route('manager.todos.export', [
+            'type' => 'daily',
+            'single_date' => '2026-09-04',
+        ]));
+        $directDaily->assertOk();
+        $this->assertStringContainsString('application/zip', $directDaily->headers->get('Content-Type'));
+    }
 }

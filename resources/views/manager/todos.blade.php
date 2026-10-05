@@ -120,6 +120,8 @@
         display: flex;
         align-items: center;
         gap: 14px;
+        min-width: 0;
+        flex: 1;
     }
     .mkt-avatar {
         width: 42px;
@@ -134,11 +136,22 @@
         font-size: 15px;
         flex-shrink: 0;
     }
+    .mkt-text {
+        min-width: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
     .mkt-name {
         font-size: 16px;
         font-weight: 700;
         color: var(--text-primary);
-        margin: 0 0 3px;
+        margin: 0 0 2px;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .mkt-sub {
         font-size: 12.5px;
@@ -146,6 +159,25 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .mkt-hint-badge {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        background: #F1F5F9;
+        padding: 4px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .mkt-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
     }
     .mkt-chevron {
         width: 20px;
@@ -387,6 +419,44 @@
         font-size: 12.5px;
         font-weight: 800;
         margin-bottom: 18px;
+    }
+    .modal-update-notice {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        transition: all .2s ease;
+    }
+    .modal-update-notice svg {
+        flex-shrink: 0;
+    }
+    .modal-update-notice.is-updated {
+        background: #F1F5F9;
+        color: #334155;
+        border: 1px solid #CBD5E1;
+    }
+    .modal-update-notice.is-updated svg {
+        color: #64748B;
+    }
+    .modal-update-notice.is-updated.is-recent {
+        background: #ECFDF5;
+        color: #065F46;
+        border-color: #A7F3D0;
+    }
+    .modal-update-notice.is-updated.is-recent svg {
+        color: #059669;
+    }
+    .modal-update-notice.is-empty {
+        background: #FFFBEB;
+        color: #92400E;
+        border: 1px solid #FDE68A;
+    }
+    .modal-update-notice.is-empty svg {
+        color: #D97706;
     }
     .modal-link-box {
         background: #F8FAFC;
@@ -835,6 +905,454 @@
     .legend-box.brown {
         background: #D7C4B7;
     }
+    /* Scope Tabs & Modal */
+    .export-scope-tabs {
+        display: flex;
+        gap: 6px;
+        background: #F1F5F9;
+        padding: 5px;
+        border-radius: 12px;
+        margin-bottom: 18px;
+    }
+    .scope-tab-btn {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748B;
+        cursor: pointer;
+        transition: all .15s ease;
+    }
+    .scope-tab-btn:hover {
+        color: #0F172A;
+    }
+    .scope-tab-btn.active {
+        background: #FFFFFF;
+        color: #059669;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .btn-quick-range {
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        background: #EFF6FF;
+        color: #2563EB;
+        border: 1px solid #BFDBFE;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all .15s ease;
+    }
+    .btn-quick-range:hover {
+        background: #2563EB;
+        color: #fff;
+    }
+
+    /* Datepicker Field & Icon */
+    .modern-datepicker-field {
+        position: relative;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+    .modern-datepicker-field .datepicker-icon {
+        position: absolute;
+        left: 12px;
+        color: #059669;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        transition: transform .15s ease;
+    }
+    .modern-datepicker-field:hover .datepicker-icon {
+        transform: scale(1.1);
+    }
+    .flatpickr-custom-input {
+        width: 100%;
+        padding: 9px 12px 9px 36px !important;
+        border: 1.5px solid #CBD5E1 !important;
+        border-radius: 10px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #0F172A !important;
+        background: #FFFFFF !important;
+        box-sizing: border-box !important;
+        transition: all 0.15s ease !important;
+        cursor: pointer !important;
+    }
+    .flatpickr-custom-input:focus,
+    .flatpickr-custom-input.active {
+        border-color: #059669 !important;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15) !important;
+        outline: none !important;
+    }
+
+    /* Modern Flatpickr Calendar Theme */
+    .flatpickr-calendar {
+        background: #FFFFFF !important;
+        border-radius: 18px !important;
+        box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.22), 0 10px 20px -5px rgba(15, 23, 42, 0.12) !important;
+        border: 1px solid #E2E8F0 !important;
+        font-family: inherit !important;
+        padding: 12px !important;
+        width: 320px !important;
+        max-width: 95vw !important;
+        z-index: 100000 !important;
+        animation: fpFadeIn .18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    @keyframes fpFadeIn {
+        from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after {
+        border-bottom-color: #E2E8F0 !important;
+    }
+    .flatpickr-calendar.arrowBottom:before, .flatpickr-calendar.arrowBottom:after {
+        border-top-color: #E2E8F0 !important;
+    }
+    .flatpickr-calendar .flatpickr-months {
+        padding: 4px 6px 10px !important;
+        position: relative;
+    }
+    .flatpickr-calendar .flatpickr-months .flatpickr-month {
+        height: 38px !important;
+        color: #1E293B !important;
+        fill: #1E293B !important;
+    }
+    .flatpickr-current-month {
+        font-size: 14.5px !important;
+        font-weight: 700 !important;
+        padding: 4px 0 0 !important;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+        font-weight: 700 !important;
+        color: #0F172A !important;
+        border-radius: 8px !important;
+        padding: 3px 6px !important;
+        cursor: pointer;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+        background: #F1F5F9 !important;
+    }
+    .flatpickr-current-month input.cur-year {
+        font-weight: 700 !important;
+        color: #0F172A !important;
+        border-radius: 8px !important;
+        padding: 2px 4px !important;
+    }
+    .flatpickr-current-month input.cur-year:hover {
+        background: #F1F5F9 !important;
+    }
+    .flatpickr-calendar .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-calendar .flatpickr-months .flatpickr-next-month {
+        height: 34px !important;
+        width: 34px !important;
+        padding: 8px !important;
+        border-radius: 10px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: background .15s ease, color .15s ease !important;
+    }
+    .flatpickr-calendar .flatpickr-months .flatpickr-prev-month:hover,
+    .flatpickr-calendar .flatpickr-months .flatpickr-next-month:hover {
+        background: #F1F5F9 !important;
+        color: #059669 !important;
+    }
+    .flatpickr-calendar .flatpickr-months .flatpickr-prev-month svg,
+    .flatpickr-calendar .flatpickr-months .flatpickr-next-month svg {
+        width: 14px !important;
+        height: 14px !important;
+        fill: #475569 !important;
+    }
+    .flatpickr-weekdays {
+        margin-bottom: 6px !important;
+    }
+    span.flatpickr-weekday {
+        color: #64748B !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .06em !important;
+    }
+    .flatpickr-calendar .flatpickr-innerContainer,
+    .flatpickr-calendar .flatpickr-days,
+    .flatpickr-calendar .dayContainer {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+    }
+    .flatpickr-calendar .flatpickr-day {
+        height: 38px !important;
+        line-height: 38px !important;
+        max-width: 38px !important;
+        border-radius: 10px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
+        border: 1px solid transparent !important;
+        transition: all .12s ease !important;
+    }
+    .flatpickr-calendar .flatpickr-day:hover {
+        background: #ECFDF5 !important;
+        color: #047857 !important;
+        border-color: #A7F3D0 !important;
+    }
+    .flatpickr-calendar .flatpickr-day.today {
+        border-color: #6EE7B7 !important;
+        color: #047857 !important;
+        font-weight: 700 !important;
+    }
+    .flatpickr-calendar .flatpickr-day.selected,
+    .flatpickr-calendar .flatpickr-day.startRange,
+    .flatpickr-calendar .flatpickr-day.endRange {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.32) !important;
+        border: 0 !important;
+    }
+    .flatpickr-calendar .flatpickr-day.inRange {
+        background: #ECFDF5 !important;
+        color: #065F46 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+    .flatpickr-calendar .flatpickr-day.prevMonthDay,
+    .flatpickr-calendar .flatpickr-day.nextMonthDay {
+        color: #CBD5E1 !important;
+    }
+    .flatpickr-calendar .flatpickr-day.flatpickr-disabled {
+        color: #E2E8F0 !important;
+        cursor: not-allowed !important;
+    }
+
+    /* Responsive Mobile CSS */
+    @media (max-width: 768px) {
+        .todos-mgr-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .todos-mgr-header h1 {
+            font-size: 22px !important;
+        }
+        .todos-mgr-header p {
+            font-size: 13px !important;
+            line-height: 1.45;
+        }
+        .todos-mgr-controls {
+            flex-direction: column;
+            align-items: stretch !important;
+            width: 100%;
+            gap: 10px !important;
+        }
+        .btn-export-excel {
+            width: 100%;
+            justify-content: center;
+            padding: 10px 16px;
+            font-size: 13.5px;
+            box-sizing: border-box;
+        }
+        .month-filter-box {
+            width: 100%;
+            justify-content: space-between;
+            box-sizing: border-box;
+            padding: 8px 12px;
+        }
+        .month-filter-box select {
+            flex: 1;
+            min-width: 0;
+            padding: 6px 4px;
+            font-size: 13px;
+        }
+
+        /* Lock Panel Mobile */
+        .card[style*="padding: 18px 22px"] {
+            padding: 14px 16px !important;
+            margin-bottom: 18px !important;
+        }
+        .card[style*="padding: 18px 22px"] form {
+            width: 100%;
+        }
+        .card[style*="padding: 18px 22px"] form button {
+            width: 100%;
+            padding: 10px 16px !important;
+            margin-top: 6px;
+        }
+
+        /* Legend Mobile */
+        .matrix-legend {
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            font-size: 11px;
+            margin-bottom: 12px;
+        }
+
+        /* Marketing Accordion Mobile */
+        .mkt-accordion-head {
+            padding: 12px 14px;
+            gap: 10px;
+        }
+        .mkt-info {
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+        .mkt-avatar {
+            width: 38px;
+            height: 38px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .mkt-text {
+            min-width: 0;
+            flex: 1;
+        }
+        .mkt-name {
+            font-size: 14.5px;
+            margin: 0 0 2px;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mkt-sub {
+            font-size: 11px;
+            gap: 5px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mkt-hint-badge {
+            display: none !important;
+        }
+        .mkt-actions {
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .btn-export-single-mkt {
+            padding: 5px 8px;
+            font-size: 11px;
+            gap: 4px;
+            border-radius: 8px;
+        }
+        .btn-export-single-text {
+            display: none !important;
+        }
+        .mkt-accordion-body {
+            padding: 10px 6px;
+        }
+
+        /* Sticky Columns Deflation on Mobile Screen */
+        .table-todo-matrix th.col-no,
+        .table-todo-matrix td.col-no {
+            width: 28px !important;
+            min-width: 28px !important;
+            max-width: 28px !important;
+            padding: 6px 1px !important;
+            font-size: 9.5px !important;
+        }
+        .table-todo-matrix th.col-uraian,
+        .table-todo-matrix td.col-uraian {
+            width: 125px !important;
+            min-width: 115px !important;
+            max-width: 130px !important;
+            left: 28px !important;
+            padding: 6px 6px !important;
+            font-size: 10.5px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            line-height: 1.25;
+        }
+        .table-todo-matrix th.col-ket,
+        .table-todo-matrix td.col-ket {
+            position: static !important;
+            box-shadow: none !important;
+            width: 130px !important;
+            min-width: 110px !important;
+            padding: 6px 6px !important;
+            font-size: 10px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            line-height: 1.25;
+        }
+        .table-todo-matrix th.col-day {
+            width: 27px !important;
+            min-width: 27px !important;
+            padding: 6px 1px !important;
+            font-size: 9.5px !important;
+        }
+        .cell-state {
+            height: 24px !important;
+            line-height: 24px !important;
+            font-size: 10px !important;
+        }
+
+        /* Edit Modal Mobile */
+        .todo-modal-overlay {
+            padding: 10px 8px;
+        }
+        .todo-modal-content {
+            border-radius: 16px;
+            max-height: 94vh;
+        }
+        .todo-modal-header {
+            padding: 14px 16px;
+            border-radius: 16px 16px 0 0;
+        }
+        .modal-hdr-user {
+            gap: 10px;
+        }
+        .modal-hdr-avatar {
+            width: 38px;
+            height: 38px;
+            font-size: 14px;
+            border-radius: 10px;
+        }
+        .modal-close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+        .todo-modal-body {
+            padding: 16px 14px;
+        }
+        .modal-file-card {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+        .pdf-filename {
+            max-width: 220px !important;
+            font-size: 12.5px !important;
+        }
+        .modern-dropzone {
+            padding: 18px 14px;
+        }
+        .selected-file-preview-card {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+        .selected-file-name {
+            max-width: 200px !important;
+        }
+        .btn-cancel-selection {
+            width: 100%;
+            justify-content: center;
+        }
+    }
 </style>
 
 <div class="todos-mgr-header">
@@ -845,9 +1363,9 @@
         </p>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+    <div class="todos-mgr-controls" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
         {{-- Tombol Export Excel ZIP (Background Job) --}}
-        <button type="button" onclick="startAsyncExport()" id="btnStartExportZip" class="btn-export-excel" title="Download arsip ZIP berisi file Excel individual per marketing (Background Job)">
+        <button type="button" onclick="openExportScopeModal()" id="btnStartExportZip" class="btn-export-excel" title="Download arsip ZIP berisi file Excel individual per marketing">
             <svg id="btnExportZipIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
@@ -976,17 +1494,17 @@
             <div class="mkt-accordion-head" onclick="toggleMktCard('{{ $m->id }}')">
                 <div class="mkt-info">
                     <div class="mkt-avatar">{{ strtoupper(substr($m->name, 0, 1)) }}</div>
-                    <div>
+                    <div class="mkt-text">
                         <div class="mkt-name">{{ $m->name }}</div>
                         <div class="mkt-sub">
                             <span>{{ '@' . $m->username }}</span>
-                            <span>•</span>
+                            <span style="opacity: 0.5;">•</span>
                             <span style="color:var(--primary-600); font-weight:700;">{{ $row['totalFilledDays'] }} Hari Aktif</span>
                         </div>
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="mkt-actions">
                     <a href="{{ route('manager.todos.export', ['month' => $month, 'year' => $year, 'user_id' => $m->id]) }}"
                        class="btn-export-single-mkt"
                        onclick="event.stopPropagation();"
@@ -995,9 +1513,9 @@
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                         </svg>
-                        <span>Export Excel</span>
+                        <span class="btn-export-single-text">Export Excel</span>
                     </a>
-                    <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); background: #F1F5F9; padding: 4px 10px; border-radius: 999px;">
+                    <span class="mkt-hint-badge">
                         Klik untuk melihat detail 1 bulan
                     </span>
                     <svg class="mkt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1105,9 +1623,12 @@
             <input type="hidden" name="task" id="modalActiveTask" value="1">
 
             <div class="todo-modal-body">
-                {{-- Badge Nama Tugas Aktif yang sedang diedit --}}
-                <div class="modal-task-badge" id="modalTaskBadge">
-                    📌 Tugas #1: Posting 12 Link Media Sosial
+                {{-- Header Tugas & Status Waktu Update Terakhir --}}
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+                    <div class="modal-task-badge" id="modalTaskBadge" style="margin-bottom: 0;">
+                        📌 Tugas #1: Posting 12 Link Media Sosial
+                    </div>
+                    <div id="modalTaskUpdateNotice" class="modal-update-notice" style="display: none;"></div>
                 </div>
 
                 {{-- Alert Sukses Modern di Atas Modal Body --}}
@@ -1205,13 +1726,14 @@
 
                         {{-- Box Berkas yang Sudah Diunggah Marketing --}}
                         <div id="pdfListBox{{ $t }}" class="current-file-container" style="margin-bottom: 20px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <span style="font-size: 13px; font-weight: 800; color: #1E293B; text-transform: uppercase; letter-spacing: 0.03em;">
                                         Berkas Bukti Terkirim (PDF / Gambar)
                                     </span>
                                     <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #E2E8F0; color: #475569; font-weight: 700;">Maks. 1 File</span>
                                 </div>
+                                <div id="taskFileMetaUpdate_{{ $t }}" style="font-size: 12px; font-weight: 600; color: #64748B; display: none;"></div>
                             </div>
                             <div id="pdfList{{ $t }}" style="display: flex; flex-direction: column; gap: 10px;">
                                 <div class="empty-file-state">
@@ -1313,6 +1835,145 @@
     @method('DELETE')
 </form>
 
+{{-- Modal Pilihan Scope Export To-Do --}}
+<div id="exportScopeModal" class="todo-modal-overlay">
+    <div class="todo-modal-content" style="max-width: 520px;">
+        <div class="todo-modal-header" style="background: linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 100%);">
+            <div class="modal-hdr-user">
+                <div class="modal-hdr-avatar" style="background: #059669; color: #fff;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #0F172A;">
+                        Export Matriks To-Do (.ZIP)
+                    </h3>
+                    <p style="margin: 3px 0 0; font-size: 13px; color: #64748B; font-weight: 500;">
+                        Pilih rentang waktu data yang ingin diexport ke file Excel per marketing.
+                    </p>
+                </div>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeExportScopeModal()" title="Tutup">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="todo-modal-body" style="padding: 20px;">
+            {{-- Tab Scope Navigasi --}}
+            <div class="export-scope-tabs">
+                <button type="button" class="scope-tab-btn active" id="tabScopeMonthly" onclick="switchExportScope('monthly')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Bulanan
+                </button>
+                <button type="button" class="scope-tab-btn" id="tabScopeRange" onclick="switchExportScope('range')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><polygon points="12 14 16 14 14 18 12 14"></polygon></svg>
+                    Mingguan / Rentang
+                </button>
+                <button type="button" class="scope-tab-btn" id="tabScopeDaily" onclick="switchExportScope('daily')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Harian
+                </button>
+            </div>
+
+            {{-- 1. Scope Form: Bulanan --}}
+            <div id="scopePaneMonthly" class="scope-pane">
+                <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 18px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">Bulan</label>
+                            <select id="exportScopeMonth" style="width: 100%; padding: 9px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: #0F172A; background: #fff;">
+                                @for ($m = 1; $m <= 12; $m++)
+                                    @php $mName = Carbon\Carbon::createFromDate(null, $m, 1)->translatedFormat('F'); @endphp
+                                    <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>{{ $mName }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">Tahun</label>
+                            <select id="exportScopeYear" style="width: 100%; padding: 9px 12px; border: 1.5px solid #CBD5E1; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: #0F172A; background: #fff;">
+                                @for ($y = now()->year; $y >= now()->year - 2; $y--)
+                                    <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #64748B; margin: 10px 0 0; line-height: 1.4;">
+                        Export satu bulan penuh matriks tanggal 1 sampai akhir bulan untuk seluruh tim marketing.
+                    </p>
+                </div>
+            </div>
+
+            {{-- 2. Scope Form: Mingguan / Rentang Tanggal --}}
+            <div id="scopePaneRange" class="scope-pane" style="display: none;">
+                <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 18px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                        <span style="font-size: 12px; font-weight: 700; color: #475569;">Pilihan Cepat:</span>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button type="button" class="btn-quick-range" onclick="setQuickRange('this_week')">Minggu Ini</button>
+                            <button type="button" class="btn-quick-range" onclick="setQuickRange('last_7_days')">7 Hari Terakhir</button>
+                            <button type="button" class="btn-quick-range" onclick="setQuickRange('this_month')">Bulan Ini</button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">Tanggal Awal</label>
+                            <div class="modern-datepicker-field" onclick="if(window.fpExportStart) window.fpExportStart.open()">
+                                <span class="datepicker-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                </span>
+                                <input type="text" id="exportScopeStartDate" class="flatpickr-custom-input" value="{{ now()->startOfWeek()->format('Y-m-d') }}" placeholder="Pilih tanggal awal..." readonly>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">Tanggal Akhir</label>
+                            <div class="modern-datepicker-field" onclick="if(window.fpExportEnd) window.fpExportEnd.open()">
+                                <span class="datepicker-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                </span>
+                                <input type="text" id="exportScopeEndDate" class="flatpickr-custom-input" value="{{ now()->endOfWeek()->format('Y-m-d') }}" placeholder="Pilih tanggal akhir..." readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #64748B; margin: 10px 0 0; line-height: 1.4;">
+                        Menghasilkan matriks tanggal kustom sesuai rentang yang ditentukan (misal monitoring mingguan).
+                    </p>
+                </div>
+            </div>
+
+            {{-- 3. Scope Form: Harian --}}
+            <div id="scopePaneDaily" class="scope-pane" style="display: none;">
+                <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 18px;">
+                    <label style="display: block; font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">Pilih Tanggal</label>
+                    <div class="modern-datepicker-field" onclick="if(window.fpExportDaily) window.fpExportDaily.open()">
+                        <span class="datepicker-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        </span>
+                        <input type="text" id="exportScopeDailyDate" class="flatpickr-custom-input" value="{{ now()->format('Y-m-d') }}" placeholder="Pilih tanggal harian..." readonly>
+                    </div>
+                    <p style="font-size: 12px; color: #64748B; margin: 10px 0 0; line-height: 1.4;">
+                        Export rekap kepatuhan khusus pada satu tanggal tertentu untuk seluruh marketing.
+                    </p>
+                </div>
+            </div>
+
+            {{-- Action Buttons --}}
+            <div>
+                <button type="button" onclick="submitScopedExport()" id="btnExecuteScopeExport" class="btn" style="width: 100%; padding: 12px 18px; font-size: 13.5px; font-weight: 800; background: #059669; color: #fff; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                    <span>Mulai Proses Export (.ZIP)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     let currentUserId = null;
     let currentDay = null;
@@ -1376,12 +2037,16 @@
         document.querySelectorAll('[id^="openLink_"]').forEach(btn => btn.style.display = 'none');
         const modalNoteEl = document.getElementById('modalNote');
         if (modalNoteEl) modalNoteEl.value = '';
+        const noticeEl = document.getElementById('modalTaskUpdateNotice');
+        if (noticeEl) noticeEl.style.display = 'none';
         for (let t = 2; t <= 6; t++) {
             cancelModalFileSelected(t);
             const listEl = document.getElementById('pdfList' + t);
             if (listEl) {
                 listEl.innerHTML = '<span style="font-size: 13px; color: #94A3B8; font-style: italic;">Memuat berkas...</span>';
             }
+            const metaEl = document.getElementById('taskFileMetaUpdate_' + t);
+            if (metaEl) metaEl.style.display = 'none';
         }
 
         document.getElementById('modalLoading').style.display = 'block';
@@ -1393,6 +2058,11 @@
                 document.getElementById('modalLoading').style.display = 'none';
                 if (data.formattedDate) {
                     document.getElementById('modalSubTitle').innerText = userName + ' • ' + data.formattedDate;
+                }
+
+                // Render status waktu update (Tugas 1 - 6)
+                if (data.task_updates && currentTaskNum >= 1 && currentTaskNum <= 6) {
+                    renderTaskUpdateInfo(currentTaskNum, data.task_updates[currentTaskNum]);
                 }
 
                 // Populate Tugas 1
@@ -1641,6 +2311,59 @@
         listContainer.innerHTML = html;
     }
 
+    function renderTaskUpdateInfo(taskNum, info) {
+        const noticeEl = document.getElementById('modalTaskUpdateNotice');
+        if (!noticeEl) return;
+
+        if (taskNum === 7) {
+            noticeEl.style.display = 'none';
+            return;
+        }
+
+        if (info && info.has_update && info.updated_at) {
+            const isRecent = !!info.is_recent;
+            noticeEl.className = 'modal-update-notice is-updated' + (isRecent ? ' is-recent' : '');
+            noticeEl.title = info.updated_at_full ? ('Update terakhir: ' + info.updated_at_full) : '';
+            noticeEl.innerHTML = `
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>Terakhir diupdate: <strong>${info.updated_at}</strong></span>
+            `;
+            noticeEl.style.display = 'inline-flex';
+        } else {
+            noticeEl.className = 'modal-update-notice is-empty';
+            noticeEl.title = 'Marketing belum mengisi atau mengunggah berkas untuk tugas ini';
+            noticeEl.innerHTML = `
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>Belum diisi / belum diupdate</span>
+            `;
+            noticeEl.style.display = 'inline-flex';
+        }
+
+        if (taskNum >= 2 && taskNum <= 6) {
+            const metaEl = document.getElementById('taskFileMetaUpdate_' + taskNum);
+            if (metaEl) {
+                if (info && info.has_update && info.updated_at) {
+                    metaEl.innerHTML = `
+                        <span style="display: inline-flex; align-items: center; gap: 4px; color: ${info.is_recent ? '#059669' : '#64748B'};">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Diupdate ${info.updated_at}
+                        </span>
+                    `;
+                    metaEl.style.display = 'inline-block';
+                } else {
+                    metaEl.style.display = 'none';
+                }
+            }
+        }
+    }
+
     function renderPdfList(taskNum, pdfs, isHighlightFirst = false) {
         const container = document.getElementById('pdfList' + taskNum);
         if (!container) return;
@@ -1669,6 +2392,9 @@
             const iconSvg = isImg
                 ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
                 : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+            const uploadTimeMeta = pdf.updated_ago
+                ? `<span style="font-weight: 500; color: #64748B;">• Diunggah ${pdf.updated_ago}</span>`
+                : '';
 
             html += `
                 <div class="modal-file-card ${isNew ? 'modal-file-card-new' : ''}" id="pdfCard_${pdf.id}">
@@ -1684,7 +2410,7 @@
                             </div>
                             <div class="pdf-filemeta">
                                 <span class="badge-verified-dot"></span>
-                                <span>Tersimpan di server</span>
+                                <span>Tersimpan di server ${uploadTimeMeta}</span>
                             </div>
                         </div>
                     </div>
@@ -1802,6 +2528,11 @@
                         }
                     }
 
+                    // Render status waktu update setelah disimpan
+                    if (res.task_updates && taskNum >= 1 && taskNum <= 6) {
+                        renderTaskUpdateInfo(taskNum, res.task_updates[taskNum]);
+                    }
+
                     // Update indikator cell pada tabel matrix to-do secara real-time
                     if (currentUserId && res.task) {
                         const daysToUpdate = (res.task === 7 && res.affectedDays && res.affectedDays.length > 0)
@@ -1905,6 +2636,13 @@
                         }
                     }
 
+                    // Perbarui status waktu update setelah berkas dihapus
+                    if (data.task_updates && data.task_updates[taskNum]) {
+                        renderTaskUpdateInfo(taskNum, data.task_updates[taskNum]);
+                    } else if (data.remainingCount === 0) {
+                        renderTaskUpdateInfo(taskNum, { has_update: false, updated_at: null, is_recent: false });
+                    }
+
                     showSuccessNotification(data.message || 'File PDF berhasil dihapus.');
                 } else {
                     alert(data.message || 'Gagal menghapus file.');
@@ -1965,10 +2703,186 @@
     // --- EXPORT ASYNCHRONOUS BACKGROUND JOB SYSTEM ---
     let exportPollTimer = null;
     let activeExportId = null;
+    let currentExportScope = 'monthly';
     const currentFilterMonth = {{ (int) $month }};
     const currentFilterYear = {{ (int) $year }};
 
+    function initExportDatepickers() {
+        if (typeof flatpickr === 'undefined') return;
+
+        const startEl = document.getElementById('exportScopeStartDate');
+        const endEl = document.getElementById('exportScopeEndDate');
+        const dailyEl = document.getElementById('exportScopeDailyDate');
+
+        if (startEl && !window.fpExportStart) {
+            window.fpExportStart = flatpickr(startEl, {
+                dateFormat: 'Y-m-d',
+                locale: 'id',
+                disableMobile: "true",
+                allowInput: false,
+                clickOpens: true,
+                onChange: function(selectedDates, dateStr) {
+                    if (window.fpExportEnd) {
+                        window.fpExportEnd.set('minDate', dateStr || null);
+                    }
+                }
+            });
+        }
+
+        if (endEl && !window.fpExportEnd) {
+            window.fpExportEnd = flatpickr(endEl, {
+                dateFormat: 'Y-m-d',
+                locale: 'id',
+                disableMobile: "true",
+                allowInput: false,
+                clickOpens: true,
+                onChange: function(selectedDates, dateStr) {
+                    if (window.fpExportStart) {
+                        window.fpExportStart.set('maxDate', dateStr || null);
+                    }
+                }
+            });
+        }
+
+        if (dailyEl && !window.fpExportDaily) {
+            window.fpExportDaily = flatpickr(dailyEl, {
+                dateFormat: 'Y-m-d',
+                locale: 'id',
+                disableMobile: "true",
+                allowInput: false,
+                clickOpens: true
+            });
+        }
+    }
+
+    function openExportScopeModal() {
+        document.getElementById('exportScopeModal').classList.add('active');
+        initExportDatepickers();
+    }
+
+    function closeExportScopeModal() {
+        document.getElementById('exportScopeModal').classList.remove('active');
+    }
+
+    function switchExportScope(scope) {
+        currentExportScope = scope;
+        document.querySelectorAll('.scope-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.scope-pane').forEach(pane => pane.style.display = 'none');
+
+        if (scope === 'monthly') {
+            document.getElementById('tabScopeMonthly').classList.add('active');
+            document.getElementById('scopePaneMonthly').style.display = 'block';
+        } else if (scope === 'range') {
+            document.getElementById('tabScopeRange').classList.add('active');
+            document.getElementById('scopePaneRange').style.display = 'block';
+            initExportDatepickers();
+            setTimeout(() => {
+                if (window.fpExportStart) window.fpExportStart.open();
+            }, 60);
+        } else if (scope === 'daily') {
+            document.getElementById('tabScopeDaily').classList.add('active');
+            document.getElementById('scopePaneDaily').style.display = 'block';
+            initExportDatepickers();
+            setTimeout(() => {
+                if (window.fpExportDaily) window.fpExportDaily.open();
+            }, 60);
+        }
+    }
+
+    function setQuickRange(type) {
+        const today = new Date();
+        const formatDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        let startStr = '';
+        let endStr = '';
+
+        if (type === 'this_week') {
+            const dayOfWeek = today.getDay(); // 0 is Sun, 1 is Mon
+            const distanceToMonday = (dayOfWeek + 6) % 7;
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - distanceToMonday);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+
+            startStr = formatDate(monday);
+            endStr = formatDate(sunday);
+        } else if (type === 'last_7_days') {
+            const past7 = new Date(today);
+            past7.setDate(today.getDate() - 6);
+
+            startStr = formatDate(past7);
+            endStr = formatDate(today);
+        } else if (type === 'this_month') {
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            startStr = formatDate(firstDay);
+            endStr = formatDate(lastDay);
+        }
+
+        if (window.fpExportStart) {
+            window.fpExportStart.setDate(startStr, true);
+        } else {
+            const el = document.getElementById('exportScopeStartDate');
+            if (el) el.value = startStr;
+        }
+
+        if (window.fpExportEnd) {
+            window.fpExportEnd.setDate(endStr, true);
+        } else {
+            const el = document.getElementById('exportScopeEndDate');
+            if (el) el.value = endStr;
+        }
+    }
+
+    function submitScopedExport() {
+        let payload = { type: currentExportScope };
+
+        if (currentExportScope === 'monthly') {
+            const m = parseInt(document.getElementById('exportScopeMonth').value, 10);
+            const y = parseInt(document.getElementById('exportScopeYear').value, 10);
+            payload.month = m;
+            payload.year = y;
+        } else if (currentExportScope === 'range') {
+            const start = document.getElementById('exportScopeStartDate').value;
+            const end = document.getElementById('exportScopeEndDate').value;
+            if (!start || !end) {
+                alert('Silakan pilih tanggal awal dan tanggal akhir.');
+                return;
+            }
+            if (start > end) {
+                alert('Tanggal awal tidak boleh melebihi tanggal akhir.');
+                return;
+            }
+            payload.start_date = start;
+            payload.end_date = end;
+        } else if (currentExportScope === 'daily') {
+            const d = document.getElementById('exportScopeDailyDate').value;
+            if (!d) {
+                alert('Silakan pilih tanggal yang ingin diexport.');
+                return;
+            }
+            payload.single_date = d;
+        }
+
+        closeExportScopeModal();
+        startAsyncExportWithPayload(payload);
+    }
+
     function startAsyncExport() {
+        startAsyncExportWithPayload({
+            type: 'monthly',
+            month: currentFilterMonth,
+            year: currentFilterYear
+        });
+    }
+
+    function startAsyncExportWithPayload(payload) {
         const btn = document.getElementById('btnStartExportZip');
         const btnText = document.getElementById('btnExportZipText');
 
@@ -1988,10 +2902,7 @@
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                month: currentFilterMonth,
-                year: currentFilterYear
-            })
+            body: JSON.stringify(payload)
         })
         .then(res => res.json())
         .then(data => {
@@ -2179,3 +3090,16 @@
     });
 </script>
 @endsection
+
+@push('scripts')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/id.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof initExportDatepickers === 'function') {
+            initExportDatepickers();
+        }
+    });
+</script>
+@endpush

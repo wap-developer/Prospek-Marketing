@@ -10,6 +10,8 @@ class ProspectWeeklyUpdate extends Model
 {
     use HasFactory;
 
+    protected $touches = ['prospect'];
+
     protected $fillable = ['prospect_id', 'user_id', 'year', 'iso_week', 'month', 'week_of_month', 'note', 'progress'];
 
     public function prospect(): BelongsTo
