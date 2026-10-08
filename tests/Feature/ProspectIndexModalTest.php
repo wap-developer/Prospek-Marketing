@@ -4,12 +4,25 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class ProspectIndexModalTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 10:00:00'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_authenticated_user_can_see_prospects_with_detail_modal(): void
     {
@@ -543,8 +556,8 @@ class ProspectIndexModalTest extends TestCase
 
     public function test_prospects_index_date_picker_filter_and_uppercase_status_options(): void
     {
-        $managerRole = Role::firstOrCreate(['slug' => 'manager_marketing'], ['name' => 'Manager Marketing']);
-        $user = User::factory()->create(['role_id' => $managerRole->id]);
+        $marketingRole = Role::firstOrCreate(['slug' => 'marketing'], ['name' => 'Marketing']);
+        $user = User::factory()->create(['role_id' => $marketingRole->id]);
 
         $service = \App\Models\Service::firstOrCreate(['name' => 'PT']);
         $sender = \App\Models\Sender::firstOrCreate(['name' => 'Website']);

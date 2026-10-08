@@ -370,6 +370,15 @@
         </a>
     </div>
 
+    @if (isset($lockSetting) && $lockSetting->is_locked)
+        <div style="margin-bottom: 20px; padding: 14px 18px; background: #FEF2F2; border: 1.5px solid #FCA5A5; border-radius: 12px; display: flex; align-items: center; gap: 12px; color: #991B1B;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <div style="font-size: 13px; line-height: 1.4;">
+                <strong>Perhatian:</strong> Input prospek saat ini sedang dikunci untuk CS (Jam operasional: 06:00 - 22:00 WIB). Sebagai Admin, Anda tetap dapat membuat prospek jika diperlukan.
+            </div>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('prospects.store') }}" class="pc-wrap" novalidate>
         @csrf
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prospect;
+use App\Models\ProspectLockSetting;
 use App\Models\ProspectWeeklyUpdate;
 use App\Models\Todo;
 use App\Models\User;
@@ -72,19 +73,16 @@ class DashboardController extends Controller
 
             if ($todayProspects->isNotEmpty()) {
                 $prospectIds = $todayProspects->pluck('id');
-                $weeklyUpdatesCount = ProspectWeeklyUpdate::whereIn('prospect_id', $prospectIds)
+                $weeklyUpdatedIds = ProspectWeeklyUpdate::whereIn('prospect_id', $prospectIds)
                     ->whereNotNull('note')
                     ->where('note', '!=', '')
-                    ->distinct('prospect_id')
-                    ->count('prospect_id');
+                    ->pluck('prospect_id')
+                    ->flip()
+                    ->toArray();
 
-                $updatedCount = 0;
-                foreach ($todayProspects as $p) {
-                    if (! empty(trim((string) $p->note))) {
-                        $updatedCount++;
-                    }
-                }
-                $task7Done = ($updatedCount >= $todayProspects->count()) || ($weeklyUpdatesCount >= $todayProspects->count());
+                $task7Done = $todayProspects->every(function ($p) use ($weeklyUpdatedIds) {
+                    return ! empty(trim((string) $p->note)) || isset($weeklyUpdatedIds[$p->id]);
+                });
             } elseif ($hasGeneralNote) {
                 $task7Done = true;
             }
@@ -184,46 +182,62 @@ class DashboardController extends Controller
             $data['activeMarketings'] = $marketings->count();
 
             $today = today();
-            $wYear = (int) $today->format('o');
-            $wIso = (int) $today->format('W');
 
-            // Ambil prospek on-process pada bulan ini untuk semua marketing (Aturan 2)
-            $targetProspects = Prospect::whereMonth('entry_date', $today->month)
-                ->whereYear('entry_date', $today->year)
-                ->whereHas('status', fn ($q) => $q->where('slug', 'open'))
-                ->get(['id', 'marketing_user_id']);
+            // Ambil prospek hari ini untuk semua marketing
+            $todayProspects = Prospect::whereDate('entry_date', $today)
+                ->get(['id', 'marketing_user_id', 'entry_date', 'note']);
 
-            $targetProspectsByUser = $targetProspects->groupBy('marketing_user_id');
-            $allTargetProspectIds = $targetProspects->pluck('id');
+            $todayProspectsByUser = $todayProspects->groupBy('marketing_user_id');
+            $allTodayProspectIds = $todayProspects->pluck('id');
 
-            $allWeeklyUpdates = ProspectWeeklyUpdate::whereIn('prospect_id', $allTargetProspectIds)
-                ->where('year', $wYear)
-                ->where('iso_week', $wIso)
+            $allWeeklyUpdates = ProspectWeeklyUpdate::whereIn('prospect_id', $allTodayProspectIds)
                 ->whereNotNull('note')
                 ->where('note', '!=', '')
-                ->get(['id', 'prospect_id', 'user_id']);
+                ->get(['id', 'prospect_id', 'note']);
 
-            $updatesByUser = $allWeeklyUpdates->groupBy('user_id');
+            $updatedProspectMap = [];
+            foreach ($todayProspects as $tp) {
+                if (! empty(trim((string) $tp->note))) {
+                    $updatedProspectMap[$tp->id] = trim((string) $tp->note);
+                }
+            }
+            foreach ($allWeeklyUpdates as $wu) {
+                if (! empty(trim((string) $wu->note))) {
+                    $updatedProspectMap[$wu->prospect_id] = trim((string) $wu->note);
+                }
+            }
 
             $todosToday = Todo::with(['links', 'pdfs'])
                 ->whereDate('date', $today)
                 ->whereHas('user.role', fn ($q) => $q->where('slug', 'marketing'))
                 ->get();
 
-            $data['todoComplianceToday'] = $marketings->map(function ($m) use ($todosToday, $targetProspectsByUser, $updatesByUser) {
+            $pdfTaskKeys = [2, 3, 4, 5, 6];
+
+            $data['todoComplianceToday'] = $marketings->map(function ($m) use ($todosToday, $todayProspectsByUser, $updatedProspectMap, $pdfTaskKeys) {
                 $todo = $todosToday->firstWhere('user_id', $m->id);
                 $linksCount = $todo?->links->count() ?? 0;
                 $pdfsCount = $todo?->pdfs->count() ?? 0;
-                $filledPdfTasks = $todo ? $todo->pdfs->groupBy('task')->count() : 0;
+                $filledPdfTasks = $todo
+                    ? $todo->pdfs->groupBy('task')->keys()->intersect($pdfTaskKeys)->count()
+                    : 0;
 
-                // Aturan 2: Tugas 7 selesai jika ada prospek dan seluruh prospek on-process telah diupdate di minggu ini
-                $userTargetIds = $targetProspectsByUser->get($m->id, collect())->pluck('id');
-                $targetCount = $userTargetIds->count();
+                // Tugas 7: prospek yang dikirim pada tanggal ini dan seluruhnya sudah diupdate
+                $dayProspects = $todayProspectsByUser->get($m->id, collect());
+                $hasGeneralNote = ! empty(trim((string) ($todo?->prospect_progress_note ?? '')));
+
                 $hasTask7 = false;
-                if ($targetCount > 0) {
-                    $userUpdates = $updatesByUser->get($m->id, collect());
-                    $distinctUpdatedCount = $userUpdates->pluck('prospect_id')->unique()->count();
-                    $hasTask7 = ($distinctUpdatedCount >= $targetCount);
+                $noteText = null;
+
+                if ($dayProspects->isNotEmpty()) {
+                    $hasTask7 = $dayProspects->every(fn ($p) => isset($updatedProspectMap[$p->id]));
+                    if ($hasTask7) {
+                        $firstUpdatedId = $dayProspects->first()->id;
+                        $noteText = $updatedProspectMap[$firstUpdatedId] ?? 'Semua prospek terupdate';
+                    }
+                } elseif ($hasGeneralNote) {
+                    $hasTask7 = true;
+                    $noteText = $todo->prospect_progress_note;
                 }
 
                 $linkTaskDone = $linksCount >= 12 ? 1 : 0;
@@ -238,7 +252,7 @@ class DashboardController extends Controller
                     'pdfs_count' => $pdfsCount,
                     'filled_pdf_tasks' => $filledPdfTasks,
                     'has_note' => $hasTask7,
-                    'note_text' => $hasTask7 ? 'Semua prospek terupdate' : null,
+                    'note_text' => $noteText,
                     'tasks_done' => $tasksDone,
                     'is_empty' => $isEmpty,
                     'is_complete' => $isComplete,
@@ -253,6 +267,7 @@ class DashboardController extends Controller
             $data['myCreatedMonth'] = Prospect::where('created_by', $user->id)
                 ->whereMonth('entry_date', now()->month)
                 ->count();
+            $data['prospectLockSetting'] = ProspectLockSetting::instance();
         }
 
         return view('dashboard', $data);

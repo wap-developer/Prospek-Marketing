@@ -5,9 +5,25 @@
         <h1 class="hero-title">{{ auth()->user()->name }}</h1>
         <p class="hero-desc">Input prospek baru dari klien dan kirim ke tim marketing yang tepat.</p>
         <div class="hero-actions">
-            <a href="{{ route('prospects.create') }}" class="btn btn-primary">+ Input Prospek Baru</a>
+            @if (isset($prospectLockSetting) && $prospectLockSetting->is_locked)
+                <button type="button" class="btn" style="background: #FFFFFF; color: #991B1B; border: 1.5px solid #FECACA; box-shadow: 0 4px 12px rgba(153, 27, 27, 0.08); display: inline-flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer;" onclick="alert('Input prospek sedang dikunci. Jam operasional pembuatan prospek baru adalah pukul 06:00 - 22:00 WIB.')">
+                    <span style="width: 20px; height: 20px; border-radius: 5px; background: #FEE2E2; color: #DC2626; display: inline-flex; align-items: center; justify-content: center;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
+                    <span>Input Prospek Dikunci</span>
+                    <span style="font-size: 11px; font-weight: 700; color: #B91C1C; background: #FEE2E2; padding: 2px 7px; border-radius: 6px;">22:00 - 06:00</span>
+                </button>
+            @else
+                <a href="{{ route('prospects.create') }}" class="btn btn-primary">+ Input Prospek Baru</a>
+            @endif
             <a href="{{ route('prospects.index') }}" class="btn btn-ghost"><span class="arrow">→</span> Lihat Semua Prospek</a>
         </div>
+        @if (isset($prospectLockSetting) && $prospectLockSetting->is_locked)
+            <div style="margin-top: 14px; padding: 10px 14px; background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 10px; color: #991B1B; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <span>{{ $prospectLockSetting->reason ?: 'Input prospek ditutup pukul 22:00 - 06:00 WIB. Pembuatan prospek baru dinonaktifkan.' }}</span>
+            </div>
+        @endif
     </div>
     <div class="hero-illustration" aria-hidden="true">
         <svg viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg">

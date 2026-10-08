@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
     // Prospek — semua role authenticated boleh lihat (scope difilter di controller)
     Route::get('prospects', [ProspectController::class, 'index'])->name('prospects.index');
     Route::get('prospects/export', [ProspectController::class, 'export'])->name('prospects.export');
+    Route::middleware('role:manager_marketing,super_admin')->post('prospects/lock-toggle', [ProspectController::class, 'toggleLock'])->name('prospects.lock-toggle');
     Route::middleware('role:cs,super_admin')->group(function () {
         Route::get('prospects/check-phone', [ProspectController::class, 'checkPhone'])->name('prospects.check-phone');
         Route::get('prospects/create', [ProspectController::class, 'create'])->name('prospects.create');

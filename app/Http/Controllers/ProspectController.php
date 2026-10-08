@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Group;
 use App\Models\Prospect;
+use App\Models\ProspectLockSetting;
 use App\Models\ProspectSource;
 use App\Models\ProspectStatus;
 use App\Models\ProspectWeeklyUpdate;
@@ -115,6 +116,7 @@ class ProspectController extends Controller
             'statuses' => ProspectStatus::where('slug', '!=', 'cancel')->orderBy('id')->get(),
             'marketings' => User::whereHas('role', fn ($q) => $q->where('slug', 'marketing'))->orderBy('name')->get(),
             'role' => $role,
+            'lockSetting' => ProspectLockSetting::instance(),
             'startDate' => $request->input('start_date'),
             'endDate' => $request->input('end_date'),
             'month' => $request->filled('month') ? $request->integer('month') : null,
@@ -384,18 +386,32 @@ class ProspectController extends Controller
         ]);
     }
 
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
         $role = $request->user()->role?->slug;
         abort_unless(in_array($role, ['cs', 'super_admin'], true), 403);
 
-        return view('prospects.create', $this->formOptions());
+        $lockSetting = ProspectLockSetting::instance();
+        if ($role === 'cs' && $lockSetting->is_locked) {
+            $msg = $lockSetting->reason ?: 'Input prospek sedang dikunci. Jam operasional pembuatan prospek baru adalah pukul 06:00 - 22:00 WIB.';
+            return redirect()->route('prospects.index')->with('error', $msg);
+        }
+
+        return view('prospects.create', array_merge($this->formOptions(), [
+            'lockSetting' => $lockSetting,
+        ]));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $role = $request->user()->role?->slug;
         abort_unless(in_array($role, ['cs', 'super_admin'], true), 403);
+
+        $lockSetting = ProspectLockSetting::instance();
+        if ($role === 'cs' && $lockSetting->is_locked) {
+            $msg = $lockSetting->reason ?: 'Input prospek sedang dikunci. Jam operasional pembuatan prospek baru adalah pukul 06:00 - 22:00 WIB.';
+            return redirect()->route('prospects.index')->with('error', $msg);
+        }
 
         $phoneDigits = preg_replace('/\D+/', '', (string) $request->input('client_phone', ''));
 
@@ -561,6 +577,27 @@ class ProspectController extends Controller
         $prospect->delete();
 
         return redirect()->route('prospects.index')->with('status', 'Prospek dihapus.');
+    }
+
+    public function toggleLock(Request $request): RedirectResponse
+    {
+        $role = $request->user()->role?->slug;
+        abort_unless(in_array($role, ['manager_marketing', 'super_admin'], true), 403);
+
+        $lockSetting = ProspectLockSetting::instance();
+        if ($lockSetting->is_locked) {
+            $lockSetting->unlock($request->user()->id);
+            $msg = 'Kunci input prospek berhasil dibuka. CS dapat menambahkan prospek baru kembali.';
+        } else {
+            $reason = trim((string) $request->input('reason', ''));
+            if ($reason === '') {
+                $reason = 'Input prospek ditutup manual oleh ' . ($role === 'super_admin' ? 'Super Admin' : 'Manager Marketing') . '.';
+            }
+            $lockSetting->lock($request->user()->id, $reason);
+            $msg = 'Input prospek berhasil dikunci. CS tidak dapat menambahkan prospek baru saat ini.';
+        }
+
+        return back()->with('status', $msg);
     }
 
     public function checkPhone(Request $request): JsonResponse

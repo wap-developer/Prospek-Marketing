@@ -96,6 +96,41 @@
         }
         .hero-btn:hover { transform: translateY(-2px); color: var(--primary-700); text-decoration: none; }
 
+        .hero-btn-locked {
+            background: #FFFFFF !important;
+            color: #991B1B !important;
+            border: 1.5px solid #FECACA !important;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(0,0,0,.12) !important;
+            transition: all .18s ease;
+        }
+        .hero-btn-locked:hover {
+            background: #FEF2F2 !important;
+            transform: translateY(-2px);
+            color: #7F1D1D !important;
+            border-color: #FCA5A5 !important;
+        }
+        .hero-btn-locked-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: #FEE2E2;
+            color: #DC2626;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .hero-btn-locked-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: #B91C1C;
+            background: #FEE2E2;
+            padding: 2px 7px;
+            border-radius: 6px;
+            letter-spacing: -0.01em;
+        }
+
         /* ===== Stats strip ===== */
         .quick-stats {
             display: grid;
@@ -843,6 +878,8 @@
             .hero-stat .num { font-size: 22px; }
             .hero-stat .lbl { font-size: 10px; }
             .hero-btn { padding: 9px 14px; font-size: 12.5px; }
+            .hero-btn-locked { padding: 8px 12px; gap: 6px; }
+            .hero-btn-locked-badge { display: none; }
 
             .quick-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .qstat {
@@ -1186,14 +1223,105 @@
                         <div class="lbl">Total Semua Data</div>
                     </div>
                     @if (in_array($role, ['cs','super_admin']))
-                        <a href="{{ route('prospects.create') }}" class="hero-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            Prospek Baru
-                        </a>
+                        @if ($role === 'cs' && isset($lockSetting) && $lockSetting->is_locked)
+                            <button type="button" class="hero-btn hero-btn-locked" onclick="alert('Input prospek sedang dikunci. Jam operasional pembuatan prospek baru adalah pukul 06:00 - 22:00 WIB.')" title="Input prospek sedang dikunci (22:00 - 06:00 WIB)">
+                                <span class="hero-btn-locked-icon">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                </span>
+                                <span>Prospek Dikunci</span>
+                                <span class="hero-btn-locked-badge">22:00 - 06:00</span>
+                            </button>
+                        @else
+                            <a href="{{ route('prospects.create') }}" class="hero-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Prospek Baru
+                            </a>
+                        @endif
                     @endif
                 </div>
             </div>
         </div>
+
+        {{-- Panel Kontrol Kunci/Buka Prospek (Khusus Manager Marketing & Super Admin) --}}
+        @if (in_array($role, ['manager_marketing', 'super_admin']) && isset($lockSetting))
+            <div class="card" style="margin-bottom: 24px; border: 1.5px solid {{ $lockSetting->is_locked ? '#FCA5A5' : '#A7F3D0' }}; background: {{ $lockSetting->is_locked ? 'linear-gradient(135deg, #FEF2F2 0%, #FFFFFF 100%)' : 'linear-gradient(135deg, #F0FDF4 0%, #FFFFFF 100%)' }}; border-radius: 16px; padding: 18px 22px; box-shadow: var(--shadow-card);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 14px; max-width: 680px;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: {{ $lockSetting->is_locked ? '#EF4444' : '#10B981' }}; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            @if ($lockSetting->is_locked)
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            @else
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                            @endif
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+                                <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: var(--text-primary);">
+                                    Status Input Prospek CS:
+                                </h2>
+                                @if ($lockSetting->is_locked)
+                                    <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #991B1B; background: #FEE2E2; border: 1px solid #FCA5A5; padding: 2px 8px; border-radius: 999px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #EF4444;"></span>
+                                        TERKUNCI (Input CS Ditutup)
+                                    </span>
+                                @else
+                                    <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #065F46; background: #D1FAE5; border: 1px solid #A7F3D0; padding: 2px 8px; border-radius: 999px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10B981;"></span>
+                                        TERBUKA (Input CS Aktif)
+                                    </span>
+                                @endif
+                            </div>
+                            <p style="margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.4;">
+                                {{ $lockSetting->is_locked ? ($lockSetting->reason ?: 'Input prospek sedang dikunci. CS tidak dapat membuat prospek baru.') : 'Input prospek terbuka. CS dapat menambahkan prospek baru (Jam operasional: 06:00 - 22:00 WIB).' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ route('prospects.lock-toggle') }}" style="margin: 0;">
+                        @csrf
+                        @if ($lockSetting->is_locked)
+                            <button type="submit" class="btn" style="background: #10B981; color: #fff; border: 0; padding: 9px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                                Buka Kunci Prospek
+                            </button>
+                        @else
+                            <button type="submit" class="btn" style="background: #EF4444; color: #fff; border: 0; padding: 9px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Kunci Prospek (Tutup Input)
+                            </button>
+                        @endif
+                    </form>
+                </div>
+            </div>
+        @endif
+
+        {{-- Banner Notifikasi Prospek Terkunci untuk CS --}}
+        @if ($role === 'cs' && isset($lockSetting) && $lockSetting->is_locked)
+            <div class="card" style="margin-bottom: 24px; border: 1.5px solid #FCA5A5; background: linear-gradient(135deg, #FEF2F2 0%, #FFFFFF 100%); border-radius: 16px; padding: 18px 22px; box-shadow: var(--shadow-card);">
+                <div style="display: flex; align-items: flex-start; gap: 14px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #EF4444; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                            <h2 style="margin: 0; font-size: 15px; font-weight: 800; color: #991B1B;">
+                                Input Prospek Baru Sedang Dikunci
+                            </h2>
+                            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #991B1B; background: #FEE2E2; border: 1px solid #FCA5A5; padding: 2px 8px; border-radius: 999px;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #EF4444;"></span>
+                                NONAKTIF
+                            </span>
+                        </div>
+                        <p style="margin: 0; font-size: 12.5px; color: #7F1D1D; line-height: 1.4;">
+                            {{ $lockSetting->reason ?: 'Input prospek ditutup setelah pukul 22:00 WIB dan akan dibuka kembali pukul 06:00 WIB. Anda tidak dapat membuat prospek baru saat ini.' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- Filter --}}
         <div class="filter-card">
